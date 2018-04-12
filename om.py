@@ -1,13 +1,45 @@
-#
+from enum import Enum
 
-BRACKETS = ['()', '[]', '<>', '/\\', '{}']
+#BRACKETS = ['()', '[]', '<>', '/\\', '{}']
+#for bracket in BRACKETS:
+#    BRACKET_DICT[bracket[0]] = bracket
+#    BRACKET_DICT[bracket[1]] = bracket
+
 BRACKET_DICT = {}
-for bracket in BRACKETS:
-    BRACKET_DICT[bracket[0]] = bracket
-    BRACKET_DICT[bracket[1]] = bracket
-
 ESCAPE = '`'
 WHITESPACE = [' ', '\n', '\t', '\r']
+
+class Bracket:
+    def __init__(self, node_type, text):
+        self.node_type = node_type
+        self.left = text[0]
+        self.right = text[1]
+        
+        BRACKET_DICT[self.left] = self
+        BRACKET_DICT[self.right] = self
+        
+    def __getitem__(self, index):
+        return self.left if index == 0 else self.right if index == 1 else None
+
+class NodeType(Enum):
+    PAREN = 'PAREN'     #()
+    SQUARE = 'SQUARE'   #[]
+    ANGLE = 'ANGLE'     #<>
+    SLASH = 'SLASH'     #/\
+    CAPTURE = 'CAPTURE' #{}
+    DEF = 'DEF'         #->
+    NORMAL = 'NORMAL'   #word
+
+Bracket(NodeType.PAREN, '()')
+Bracket(NodeType.SQUARE, '[]')
+Bracket(NodeType.SLASH, '/\\')
+Bracket(NodeType.ANGLE, '<>')
+
+class ParseNode:
+    def __init__(self, node_type, val='', children=[]):
+        self.node_type = node_type
+        self.val = val
+        self.children = children[:]
 
 class Shell:
     def __init__(self):
@@ -66,38 +98,27 @@ class Shell:
             ind += 1 #Update index for next letter
                 
         return tokens
-        #for char in line + ' ':
-        #    if escaping:
-        #        curr_token += char
-        #        escaping = False
-        #    elif char == '`':
-        #        curr_token += char
-        #        escaping = True
-        #    elif char in BRACKET_DICT:
-        #        curr_token += char
-        #        bracket_type = BRACKET_DICT[char]
-        #        print(char, ' ', bracket_type)
-        #        if char == bracket_type[0]:
-        #            brackets[bracket_type] = brackets.get(bracket_type, 0)+1
-        #        elif char == bracket_type[1]:
-        #            brackets[bracket_type] = brackets.get(bracket_type, 0)-1
-        #        else:
-        #            raise AssertionError
-        #    elif char in WHITESPACE:
-        #        free = True
-        #        for bracket_type in brackets:
-        #            if brackets[bracket_type] != 0:
-        #                free = False
-        #        if free:
-        #            tokens.append(curr_token)
-        #            curr_token = ''
-        #        else:
-        #            curr_token += char
-        #    else:
-        #        curr_token += char
 
     def parse(self, token):
-        pass
+        if token[0] == '(' and token[-1] == ')':
+            inside = token[1:-1] #Withouth the parens
+            node = ParseNode(NodeType.PAREN, val=inside)
 
     def interpet(self, line):
         tokens = self.tokenize(line)
+        
+        if tokens[1] == '->':
+            pass
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
