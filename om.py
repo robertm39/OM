@@ -1,10 +1,5 @@
 from enum import Enum
 
-#BRACKETS = ['()', '[]', '<>', '/\\', '{}']
-#for bracket in BRACKETS:
-#    BRACKET_DICT[bracket[0]] = bracket
-#    BRACKET_DICT[bracket[1]] = bracket
-
 BRACKET_DICT = {}
 ESCAPE = '`'
 WHITESPACE = [' ', '\n', '\t', '\r']
@@ -30,16 +25,29 @@ class NodeType(Enum):
     DEF = 'DEF'         #->
     NORMAL = 'NORMAL'   #word
 
-Bracket(NodeType.PAREN, '()')
-Bracket(NodeType.SQUARE, '[]')
-Bracket(NodeType.SLASH, '/\\')
-Bracket(NodeType.ANGLE, '<>')
+paren = Bracket(NodeType.PAREN, '()')
+square = Bracket(NodeType.SQUARE, '[]')
+slash = Bracket(NodeType.SLASH, '/\\')
+angle = Bracket(NodeType.ANGLE, '<>')
+BRACKETS = [paren, square, slash, angle]
 
 class ParseNode:
     def __init__(self, node_type, val='', children=[]):
         self.node_type = node_type
         self.val = val
         self.children = children[:]
+        
+    def __str__(self):
+        result = '(' + str(self.node_type)[9:] + ' ' + str(self.val) + ')\n'
+        result = result[0] + result[1:-1].strip() + result [-1] #Get rid of internal edge whitespace
+        for child in self.children:
+            result += '\t(' + str(child.node_type)[9:] + ' ' + str(child.val) + ' ' + str(len(child.children)) + ' children)\n'
+        return result
+    
+    def __repr__(self):
+        return str(self)
+        
+DEF_NODE = ParseNode(NodeType.DEF)
 
 class Shell:
     def __init__(self):
@@ -100,15 +108,39 @@ class Shell:
         return tokens
 
     def parse(self, token):
-        if token[0] == '(' and token[-1] == ')':
-            inside = token[1:-1] #Withouth the parens
-            node = ParseNode(NodeType.PAREN, val=inside)
+        for bracket in BRACKETS:
+            if token[0] == bracket[0] and token[-1] == bracket[1]:
+                text = token[1:-1]
+                child_tokens = self.tokenize(text)
+                children = [self.parse(token) for token in child_tokens]
+                
+                node = ParseNode(bracket.node_type, children=children)
+                return node
+        if token[0] == '{' and token[-1] == '}': #Technically not a bracket
+            text = token[1:-1]
+            node = ParseNode(NodeType.CAPTURE, val=text)
+            return node
+        if token == '|-':
+            return DEF_NODE
+        return ParseNode(NodeType.NORMAL, val=token)
+
+    def apply_macros(self, tokens): #Takes parsed tokens
+        for token in tokens:
+            if token.node_type is NodeType.NORMAL:
+                if token.val in self.macros:
+                    token.val = self.macros[token.val]
+                    return True
+#            if token.node_type 
 
     def interpet(self, line):
         tokens = self.tokenize(line)
+        print(tokens)
+        tokens = [self.parse(token) for token in tokens] #Parse tokens
+        print(tokens)
         
-        if tokens[1] == '->':
-            pass
+        #while self.apply_macros(tokens): #Go until no more
+        #    pass
+        #print(tokens)
         
         
         
