@@ -9,10 +9,10 @@ import om as mac
 
 s = mac.Shell()
 #tok = '(hello world) normal tokens <cool brackets> /cooler brackets\\ ( [{} ])'
-tok = '(a b) |- (b a (cd f))'
+tok = '(a b) -> (b a [cd f {t}])'
 #print(s.tokenize(tok))
 s.interpet(tok)
 print('')
-s.interpet('(b) |- (c)')
+s.interpet('/b\ -> {c}')
 print('')
 s.interpet('a')

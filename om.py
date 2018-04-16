@@ -19,17 +19,17 @@ class Bracket:
 class NodeType(Enum):
     PAREN = 'PAREN'     #()
     SQUARE = 'SQUARE'   #[]
-    ANGLE = 'ANGLE'     #<>
+    CURLY = 'CURLY'     #{}
     SLASH = 'SLASH'     #/\
-    CAPTURE = 'CAPTURE' #{}
+    CAPTURE = 'CAPTURE' #~*
     DEF = 'DEF'         #->
     NORMAL = 'NORMAL'   #word
 
 paren = Bracket(NodeType.PAREN, '()')
 square = Bracket(NodeType.SQUARE, '[]')
 slash = Bracket(NodeType.SLASH, '/\\')
-angle = Bracket(NodeType.ANGLE, '<>')
-BRACKETS = [paren, square, slash, angle]
+curly = Bracket(NodeType.CURLY, '{}')
+BRACKETS = [paren, square, slash, curly]
 
 class ParseNode:
     def __init__(self, node_type, val='', children=[]):
@@ -37,11 +37,13 @@ class ParseNode:
         self.val = val
         self.children = children[:]
         
-    def __str__(self):
-        result = '(' + str(self.node_type)[9:] + ' ' + str(self.val) + ')\n'
-        result = result[0] + result[1:-1].strip() + result [-1] #Get rid of internal edge whitespace
+    def __str__(self, depth=0):
+        result = '(' + str(self.node_type)[9:] + ' ' + str(self.val) + ')'
+        result = result[0] + result[1:-1].strip() + result[-1] #Get rid of internal edge whitespace
+        result = '\t' * depth + result + '\n'
         for child in self.children:
-            result += '\t(' + str(child.node_type)[9:] + ' ' + str(child.val) + ' ' + str(len(child.children)) + ' children)\n'
+            result += child.__str__(depth=depth+1)
+        
         return result
     
     def __repr__(self):
@@ -116,11 +118,11 @@ class Shell:
                 
                 node = ParseNode(bracket.node_type, children=children)
                 return node
-        if token[0] == '{' and token[-1] == '}': #Technically not a bracket
+        if token[0] == '~':# and token[-1] == '}': #Technically not a bracket
             text = token[1:-1]
             node = ParseNode(NodeType.CAPTURE, val=text)
             return node
-        if token == '|-':
+        if token == '->':
             return DEF_NODE
         return ParseNode(NodeType.NORMAL, val=token)
 
