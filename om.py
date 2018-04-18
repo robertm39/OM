@@ -4,37 +4,6 @@ BRACKET_DICT = {}
 ESCAPE = '`'
 WHITESPACE = [' ', '\n', '\t', '\r']
 
-class Macro:
-    def __init__(self, form, get_product):
-        self.form = form #An expression with only parens, captures, normals, literals and defs (literals not yet implemented)
-        self.get_product = get_product
-        
-    def matches(self, expr, form=None, mappings=None):#Whether this macro matches the given expression, starting at the left
-        form = self.form if form == None else form
-        mappings = {} if mappings == None else mappings #Captured values: name -> node
-        i = 0
-        for node in expr:
-            to_match = form[i]
-            
-            if to_match.node_type is NodeType.CAPTURE: #Capture nodes
-                name = to_match.val
-                if name in mappings: #See whether the node matches the captured node
-                    captured_node = mappings[name]
-                    if node != captured_node:
-                        return False
-                else: #Capture this node
-                    mappings[name] = node
-            elif to_match.node_type is NodeType.PAREN: #A list
-                does_match, mappings = self.matches(node, form=to_match, mappings=mappings)
-                if not does_match:
-                    return False
-            elif to_match.node_type is NodeType.NORMAL:
-                if to_match != node:
-                    return False
-            elif to_match.node_type is NodeType.DEF:
-                if not node.node_type is NodeType.DEF:
-                    return False
-
 class Bracket:
     def __init__(self, node_type, text):
         self.node_type = node_type
@@ -61,6 +30,71 @@ square = Bracket(NodeType.SQUARE, '[]')
 slash = Bracket(NodeType.SLASH, '/\\')
 curly = Bracket(NodeType.CURLY, '{}')
 BRACKETS = [paren, square, slash, curly]
+
+def fill_in_form(form, mappings):
+    form = form[:]
+    
+    i = 0
+    for node in form:
+        if node.node_type is NodeType.CAPTURE:
+            name = node.val
+            if name in mappings:
+                form[i] = mappings[name]
+        elif node.node_type in [NodeType.PAREN, NodeType.SQUARE, NodeType.CURLY, NodeType.SLASH]:
+            new_node = fill_in_form(node.children, mappings)
+            form[i] = new_node
+        i += 1
+    return form
+
+class Macro:
+    def __init__(self, form, get_product=None, product_form=None):
+        self.form = form #An expression with only parens, captures, normals, literals and defs (literals not yet implemented)
+        if get_product != None:
+            self.get_product = get_product
+        elif product_form != None:
+            self.get_product = lambda mappings: fill_in_form(self.form, mappings)
+        else:
+            raise AssertionError('No get_product or product_form')
+        
+    def matches(self, expr, form=None, mappings=None):#Whether this macro matches the given expression, starting at the left
+        form = self.form if form == None else form
+        mappings = {} if mappings == None else mappings #Captured values: name -> node
+        i = 0
+        
+        not_matches = False, {}, 0
+        
+        for node in expr:
+            to_match = form[i]
+            
+            if to_match.node_type is NodeType.CAPTURE: #Capture nodes
+                name = to_match.val
+                if name in mappings: #See whether the node matches the captured node
+                    captured_node = mappings[name]
+                    if node != captured_node:
+                        return not_matches
+                else: #Capture this node
+                    mappings[name] = node
+            elif to_match.node_type is NodeType.PAREN: #A list
+                does_match, mappings, length = self.matches(node, form=to_match, mappings=mappings)
+                if not does_match:
+                    return not_matches
+            elif to_match.node_type is NodeType.NORMAL:
+                if to_match != node:
+                    return not_matches
+            elif to_match.node_type is NodeType.DEF:
+                if not node.node_type is NodeType.DEF:
+                    return not_matches
+        
+        return True, mappings, len(form)
+
+###Macro has the matches method
+###Takes the expression to match
+###Returns whether it matches,the captured nodes, and the length of the match
+###It may also have side effects for certain built-in macros
+
+###Macro also has the result method
+###Takes the captured nodes
+###Returns the new expression
 
 class ParseNode:
     def __init__(self, node_type, val='', children=[]):
@@ -159,20 +193,62 @@ class Shell:
             return DEF_NODE
         return ParseNode(NodeType.NORMAL, val=token.replace('`', ''))
 
-    def apply_macros(self, tokens): #Takes parsed tokens
-        for token in tokens:
-            if token.node_type is NodeType.NORMAL:
-                if token.val in self.macros:
-                    token.val = self.macros[token.val]
-                    return True
-#            if token.node_type 
+#    def apply_macros(self, tokens): #Takes parsed tokens
+#        for token in tokens:
+#            if token.node_type is NodeType.NORMAL:
+#                if token.val in self.macros:
+#                    token.val = self.macros[token.val]
+#                    return True
+##            if token.node_type 
+
+    def apply_macros(self, nodes): #Takes and returns a list of nodes
+        i = 0
+        nodes = nodes[:] #Copy to get rid of side effects
+        
+        changed = False
+        
+        for node in nodes: #Interpret inner brackets first
+            if node.node_type in [NodeType.SQUARE, NodeType.CURLY, NodeType.SLASH]:
+                changed = True
+                
+                insides = node.children
+                interpreted = self.apply_macros(insides)
+                if node.node_type is NodeType.SQUARE:
+                    nodes = nodes[0:i] + interpreted + nodes[i+1:] #Put the result in without brackets
+                elif node.node_type is NodeType.CURLY:
+                    interpreted = ParseNode(NodeType.PAREN, children=interpreted)
+                    nodes = nodes[0:i] + [interpreted] + nodes[i+1:] #Put the result in with paren brackets
+                elif node.node_type is NodeType.SLASH:
+                    interpreted = ParseNode(NodeType.DONE_SLASH, children=interpreted)
+                    nodes = nodes[0:i] + [interpreted] + nodes[i+1:] #Put the result in with done-slash brackets
+            i += 1
+        #Now the expression has no square, curly or slash brackets
+        #Only paren and done-slash
+        #Now we can apply macros
+        
+        for i in range(0, len(nodes)):
+            #to_match = nodes[i:]
+            for macro in self.macros:
+                matches, captures, length = macro.matches(nodes[i:], side_effects=True)
+                if matches:
+                    changed = True
+                    product = macro.get_product(captures)
+                    nodes = nodes[0:i] + product + nodes[i+length:]
+                i += 1
+                
+        return nodes, changed
 
     def interpet(self, line):
         tokens = self.tokenize(line)
         print(tokens)
-        tokens = [self.parse(token) for token in tokens] #Parse tokens
-        print(tokens)
+        nodes = [self.parse(token) for token in tokens] #Parse tokens
+        print(nodes)
         
+        changed = True
+        while changed:
+            nodes, changed = self.apply_macros(nodes)
+            
+        print(nodes)
         #while self.apply_macros(tokens): #Go until no more
         #    pass
         #print(tokens)
