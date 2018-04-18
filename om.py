@@ -4,6 +4,37 @@ BRACKET_DICT = {}
 ESCAPE = '`'
 WHITESPACE = [' ', '\n', '\t', '\r']
 
+class Macro:
+    def __init__(self, form, get_product):
+        self.form = form #An expression with only parens, captures, normals, literals and defs (literals not yet implemented)
+        self.get_product = get_product
+        
+    def matches(self, expr, form=None, mappings=None):#Whether this macro matches the given expression, starting at the left
+        form = self.form if form == None else form
+        mappings = {} if mappings == None else mappings #Captured values: name -> node
+        i = 0
+        for node in expr:
+            to_match = form[i]
+            
+            if to_match.node_type is NodeType.CAPTURE: #Capture nodes
+                name = to_match.val
+                if name in mappings: #See whether the node matches the captured node
+                    captured_node = mappings[name]
+                    if node != captured_node:
+                        return False
+                else: #Capture this node
+                    mappings[name] = node
+            elif to_match.node_type is NodeType.PAREN: #A list
+                does_match, mappings = self.matches(node, form=to_match, mappings=mappings)
+                if not does_match:
+                    return False
+            elif to_match.node_type is NodeType.NORMAL:
+                if to_match != node:
+                    return False
+            elif to_match.node_type is NodeType.DEF:
+                if not node.node_type is NodeType.DEF:
+                    return False
+
 class Bracket:
     def __init__(self, node_type, text):
         self.node_type = node_type
@@ -21,7 +52,7 @@ class NodeType(Enum):
     SQUARE = 'SQUARE'   #[]
     CURLY = 'CURLY'     #{}
     SLASH = 'SLASH'     #/\
-    CAPTURE = 'CAPTURE' #~*
+    CAPTURE = 'CAPTURE' #~word
     DEF = 'DEF'         #->
     NORMAL = 'NORMAL'   #word
 
@@ -48,6 +79,8 @@ class ParseNode:
     
     def __repr__(self):
         return str(self)
+    
+    #TODO __eq__, __neq__
         
 DEF_NODE = ParseNode(NodeType.DEF)
 
@@ -119,12 +152,12 @@ class Shell:
                 node = ParseNode(bracket.node_type, children=children)
                 return node
         if token[0] == '~':# and token[-1] == '}': #Technically not a bracket
-            text = token[1:-1]
+            text = token[1:]
             node = ParseNode(NodeType.CAPTURE, val=text)
             return node
         if token == '->':
             return DEF_NODE
-        return ParseNode(NodeType.NORMAL, val=token)
+        return ParseNode(NodeType.NORMAL, val=token.replace('`', ''))
 
     def apply_macros(self, tokens): #Takes parsed tokens
         for token in tokens:
