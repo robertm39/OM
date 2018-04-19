@@ -32,7 +32,12 @@ curly = Bracket(NodeType.CURLY, '{}')
 BRACKETS = [paren, square, slash, curly]
 
 def fill_in_form(form, mappings):
+#    print('fill_in_form running')
+#    print(form)
+#    print('')
     form = form[:]
+#    print(form)
+#    print('')
     
     i = 0
     for node in form:
@@ -41,9 +46,13 @@ def fill_in_form(form, mappings):
             if name in mappings:
                 form[i] = mappings[name]
         elif node.node_type in [NodeType.PAREN, NodeType.SQUARE, NodeType.CURLY, NodeType.SLASH]:
-            new_node = fill_in_form(node.children, mappings)
-            form[i] = new_node
+            new_nodes = fill_in_form(node.children, mappings)
+            form[i] = ParseNode(node.node_type, children=new_nodes)
+#            new_node = fill_in_form(node.children, mappings)
+#            form[i] = new_node
         i += 1
+#    print(form)
+#    print('***')
     return form
 
 class Macro:
@@ -52,19 +61,33 @@ class Macro:
         if get_product != None:
             self.get_product = get_product
         elif product_form != None:
-            self.get_product = lambda mappings: fill_in_form(self.form, mappings)
+#            print('Going by product_form')
+            self.get_product = lambda mappings: fill_in_form(product_form, mappings)
         else:
             raise AssertionError('No get_product or product_form')
         
     def matches(self, expr, form=None, mappings=None):#Whether this macro matches the given expression, starting at the left
+#        print('matches running')
+        
         form = self.form if form == None else form
         mappings = {} if mappings == None else mappings #Captured values: name -> node
         i = 0
         
         not_matches = False, {}, 0
         
+        print('expr:')
+        print(expr)
+        print('***')
+        
+        if len(expr) < len(form):
+            return not_matches
+        
+#        print('Checking nodes')
         for node in expr:
             to_match = form[i]
+#            print(node)
+#            print(to_match)
+#            print('***')
             
             if to_match.node_type is NodeType.CAPTURE: #Capture nodes
                 name = to_match.val
@@ -75,7 +98,7 @@ class Macro:
                 else: #Capture this node
                     mappings[name] = node
             elif to_match.node_type is NodeType.PAREN: #A list
-                does_match, mappings, length = self.matches(node, form=to_match, mappings=mappings)
+                does_match, mappings, length = self.matches(node.children, form=to_match.children, mappings=mappings)
                 if not does_match:
                     return not_matches
             elif to_match.node_type is NodeType.NORMAL:
@@ -84,8 +107,46 @@ class Macro:
             elif to_match.node_type is NodeType.DEF:
                 if not node.node_type is NodeType.DEF:
                     return not_matches
+            i += 1
+            if i >= len(form):
+                break #We've gone past the form
         
         return True, mappings, len(form)
+
+###Built-in macros
+def unpack_and_wrap_node(node):
+    if node.node_type is NodeType.PAREN:
+        return node.children
+#    return node
+    return [node]
+
+def defmac_get_product(shell, mappings):
+#    print('defmac_get_product running')
+#    print(mappings)
+    
+    form = mappings['FORM']
+    product_form = mappings['PRODUCT']
+    
+    form = unpack_and_wrap_node(form)
+    product_form = unpack_and_wrap_node(product_form)
+#    print('form:')
+#    print(form)
+#    print('\nproduct_form:')
+#    print(product_form)
+#    print('***')
+    
+    shell.macros.append(Macro(form, product_form=product_form))
+    return [] #Evaluates to nothing
+
+def get_defmac_macro(shell):
+#    n_shell = Shell()#For simplicity
+    form = [ParseNode(NodeType.CAPTURE, val='FORM'), DEF_NODE, ParseNode(NodeType.CAPTURE, val='PRODUCT')]
+    return Macro(form=form,
+                 get_product=lambda maps: defmac_get_product(shell, maps))
+    
+def get_builtin_macros(shell):
+    return [get_defmac_macro(shell)]
+###End Built-in macros
 
 ###Macro has the matches method
 ###Takes the expression to match
@@ -114,13 +175,26 @@ class ParseNode:
     def __repr__(self):
         return str(self)
     
+    def __eq__(self, other):
+        if other == None:
+            return False
+        if self.node_type != other.node_type:
+            return False
+        if self.val != other.val:
+            return False
+        if self.children != other.children:
+            return False
+        return True
+        
+        
     #TODO __eq__, __neq__
         
 DEF_NODE = ParseNode(NodeType.DEF)
 
 class Shell:
     def __init__(self):
-        self.macros = {}
+        self.macros = get_builtin_macros(self)
+#        print(self.macros)
 
     def matching_bracket_index(self, line, ind):
         bracket = line[ind]
@@ -141,7 +215,7 @@ class Shell:
                 elif char == bracket_type[1]:
                     num -= direction
         if num != 0:
-            print(line, ' ', line[ind], ind, num)
+#            print(line, ' ', line[ind], ind, num)
             raise AssertionError
         return ind
 
@@ -202,19 +276,29 @@ class Shell:
 ##            if token.node_type 
 
     def apply_macros(self, nodes): #Takes and returns a list of nodes
+#        print('')
+#        print('apply_macros running')
+#        print('Nodes:')
+#        print(nodes)
+#        print('')
         i = 0
         nodes = nodes[:] #Copy to get rid of side effects
         
         changed = False
         
         for node in nodes: #Interpret inner brackets first
+#            print(node)
+            
+            while type(node) is list: #Kludge
+                node = node[0]
+            
             if node.node_type in [NodeType.SQUARE, NodeType.CURLY, NodeType.SLASH]:
                 changed = True
                 
                 insides = node.children
-                interpreted = self.apply_macros(insides)
+                interpreted, changed = self.apply_macros(insides)
                 if node.node_type is NodeType.SQUARE:
-                    nodes = nodes[0:i] + interpreted + nodes[i+1:] #Put the result in without brackets
+                    nodes = nodes[0:i] + list(interpreted) + nodes[i+1:] #Put the result in without brackets
                 elif node.node_type is NodeType.CURLY:
                     interpreted = ParseNode(NodeType.PAREN, children=interpreted)
                     nodes = nodes[0:i] + [interpreted] + nodes[i+1:] #Put the result in with paren brackets
@@ -226,28 +310,43 @@ class Shell:
         #Only paren and done-slash
         #Now we can apply macros
         
-        for i in range(0, len(nodes)):
+        for i in range(0, len(nodes)): #going through nodes
+#            print('At index ' + str(i))
             #to_match = nodes[i:]
             for macro in self.macros:
-                matches, captures, length = macro.matches(nodes[i:], side_effects=True)
+#                print('checking ' + str(macro))
+#                print('current nodes:')
+#                print(nodes[i:])
+#                print('')
+                matches, captures, length = macro.matches(nodes[i:])#, side_effects=True)
+#                print(matches)
+#                print(captures)
+#                print(length)
+#                print('')
                 if matches:
                     changed = True
                     product = macro.get_product(captures)
+#                    print('Product: ' + str(product))
                     nodes = nodes[0:i] + product + nodes[i+length:]
-                i += 1
+#                i += 1
                 
         return nodes, changed
 
-    def interpet(self, line):
+    def interpret(self, line, verbose=False):
         tokens = self.tokenize(line)
-        print(tokens)
+        if verbose:
+            print(tokens)
         nodes = [self.parse(token) for token in tokens] #Parse tokens
-        print(nodes)
+        
+        if verbose:
+            print(nodes)
         
         changed = True
         while changed:
             nodes, changed = self.apply_macros(nodes)
-            
+        
+        if verbose:
+            print('After macros:')
         print(nodes)
         #while self.apply_macros(tokens): #Go until no more
         #    pass
