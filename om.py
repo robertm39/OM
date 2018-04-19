@@ -142,6 +142,7 @@ def defmac_get_product(shell, mappings):
     product_form = unpack_and_wrap_node(product_form)
     
     shell.macros.append(Macro(form, product_form=product_form))
+    shell.sort_macros() #Should add method to Shell for adding and sorting together
     return [] #Evaluates to nothing
 
 def get_defmac_macro(shell):
@@ -259,9 +260,13 @@ class ParseNode:
         if self.children != other.children:
             return False
         return True
-        
-    def __neq__(self, other):
+    
+    def __ne__(self, other):
         return not self == other
+    
+#    def __neq__(self, other):
+#        print('NEQ')
+#        return not self == other
         
 DEF_NODE = ParseNode(NodeType.DEF)
 
@@ -349,21 +354,21 @@ class Shell:
 #                    return True
 ##            if token.node_type 
 
+    def sort_macros(self):
+        self.macros.sort(key=lambda m:len(m.form))
+
     def apply_macros(self, nodes): #Takes and returns a list of nodes
-#        print('')
-#        print('apply_macros running')
-#        print('Nodes:')
-#        print(nodes)
-#        print('')
+        self.sort_macros()
+        
         i = 0
         nodes = nodes[:] #Copy to get rid of side effects
         
         changed = False
         
         for node in nodes: #Interpret inner brackets first
-#            print(node)
             
             while type(node) is list: #Kludge
+                print('LIST')
                 node = node[0]
             
             if node.node_type in [NodeType.SQUARE, NodeType.CURLY]:#BRACKET_TYPES:
@@ -373,22 +378,17 @@ class Shell:
                 interpreted, changed = self.apply_macros(insides)
                 if node.node_type is NodeType.SQUARE:
                     nodes = nodes[0:i] + list(interpreted) + nodes[i+1:] #Put the result in without brackets
-#                    print('nodes after square:')
-#                    print(nodes)
-#                    print('*****')
                 elif node.node_type is NodeType.CURLY:
                     interpreted = ParseNode(NodeType.PAREN, children=interpreted)
                     nodes = nodes[0:i] + [interpreted] + nodes[i+1:] #Put the result in with paren brackets
-#                elif node.node_type is NodeType.SLASH:
-#                    interpreted = ParseNode(NodeType.DONE_SLASH, children=interpreted)
-#                    nodes = nodes[0:i] + [interpreted] + nodes[i+1:] #Put the result in with done-slash brackets
             i += 1
-        #Now the expression has no square, curly or slash brackets
-        #Only paren and done-slash
+        #Now the expression has no outer square or curly brackets
+        #Only paren
         #Now we can apply macros
         
         for i in range(0, len(nodes)): #going through nodes
             for macro in self.macros:
+#                print('Length: ' + str(len(macro.form)))
                 matches, captures, length = macro.matches(nodes[i:])
                 if matches:
 #                    print(macro)
@@ -398,6 +398,7 @@ class Shell:
 #                    print(nodes)
 #                    print('*****')
 #                i += 1
+#            print('***')
                 
         return nodes, changed
 
