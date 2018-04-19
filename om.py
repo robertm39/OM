@@ -94,6 +94,9 @@ class Macro:
         
 #        print('Checking nodes')
         for node in expr:
+            if node.val == '|': #blocks macro comprehension
+                return not_matches
+            
             to_match = form[i]
 #            print(node)
 #            print(to_match)
@@ -155,8 +158,16 @@ def to_bool_get_product(mappings): #Improve
         return t_node if node.children else f_node
     if node in [t_node[0], f_node[0]]: #False and True evaluate to themselves
         return [node]
-    if node.val in ['0', '', '0.0']:
-        return f_node
+    try:
+        if float(node.val):
+            return t_node
+        else:
+            return f_node
+    except ValueError:
+        pass
+#    if node.val in ['0', '', '0.0']:
+#        return f_node
+#    print(node.val)
     return t_node
 
 def get_to_bool_macro():
@@ -179,6 +190,14 @@ def get_binary_macro(name, op):
                  name=name,
                  get_product=lambda maps: binary_macro_get_product(maps, op))
 
+def pop_macro_get_product(mappings):
+    node = mappings['a']
+    return node.children
+
+def get_pop_macro():
+    form = [ParseNode(NodeType.NORMAL, val='pop'), ParseNode(NodeType.CAPTURE, val='a')]
+    return Macro(form=form, name='pop', get_product=pop_macro_get_product)
+
 #def add_macro_get_product(mappings):
 #    n1 = mappings['a']
 #    n2 = mappings['b']
@@ -196,6 +215,7 @@ def get_binary_macro(name, op):
 def get_builtin_macros(shell):
     return [get_defmac_macro(shell),
             get_to_bool_macro(),
+            get_pop_macro(),
             get_binary_macro('+', lambda a,b:float(a) + float(b)),
             get_binary_macro('-', lambda a,b:float(a) - float(b)),
             get_binary_macro('*', lambda a,b:float(a) * float(b)),
@@ -353,9 +373,9 @@ class Shell:
                 interpreted, changed = self.apply_macros(insides)
                 if node.node_type is NodeType.SQUARE:
                     nodes = nodes[0:i] + list(interpreted) + nodes[i+1:] #Put the result in without brackets
-                    print('nodes after square:')
-                    print(nodes)
-                    print('*****')
+#                    print('nodes after square:')
+#                    print(nodes)
+#                    print('*****')
                 elif node.node_type is NodeType.CURLY:
                     interpreted = ParseNode(NodeType.PAREN, children=interpreted)
                     nodes = nodes[0:i] + [interpreted] + nodes[i+1:] #Put the result in with paren brackets
@@ -371,12 +391,12 @@ class Shell:
             for macro in self.macros:
                 matches, captures, length = macro.matches(nodes[i:])
                 if matches:
-                    print(macro)
+#                    print(macro)
                     changed = True
                     product = macro.get_product(captures)
                     nodes = nodes[0:i] + product + nodes[i+length:]
-                    print(nodes)
-                    print('*****')
+#                    print(nodes)
+#                    print('*****')
 #                i += 1
                 
         return nodes, changed
@@ -393,12 +413,12 @@ class Shell:
         changed = True
         while changed:
             nodes, changed = self.apply_macros(nodes)
-            print('')
-            print(nodes)
+#            print('')
+#            print(nodes)
         
         if verbose:
             print('After macros:')
-        print('***')
+#        print('***')
         print(nodes)
         #while self.apply_macros(tokens): #Go until no more
         #    pass
