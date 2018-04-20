@@ -12,7 +12,7 @@ s = mac.Shell()
 s.interpret('(cond ~a True ~b) -> ([unw ~a])')
 s.interpret('(cond ~a False ~b) -> ([unw ~b])')
 #s.interpret('(~a for ~n) -> (cond (pop ~a | ~a for [~n - 1]) [bool ~n] ())') #KEEP
-s.interpret('(~a while ~b) -> (cond (unw ~a | ~a while ~b) [bool [unw ~b]] () )')
+s.interpret('(~a while ~b) -> (cond ([unw ~a] | ~a while ~b) unw ([bool [unw ~b]]) () )')
 
 
 s.interpret('n -> 10')
@@ -21,7 +21,7 @@ s.interpret('n -> 10')
 
 print('**********')
 
-s.interpret('(pr n [(n) -> {n - 1}]) while (n > 0)')
+s.interpret('([pr n] [(n) -> {n - 1}]) while (n > 0)')
 
 #s.interpret('**********')
 #s.interpret('10')

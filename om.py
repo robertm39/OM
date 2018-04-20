@@ -20,7 +20,6 @@ class NodeType(Enum):
     PAREN = 'PAREN'     #()
     SQUARE = 'SQUARE'   #[]
     CURLY = 'CURLY'     #{}
-#    SLASH = 'SLASH'     #/\
     CAPTURE = 'CAPTURE' #~word
     DEF = 'DEF'         #->
     NORMAL = 'NORMAL'   #word
@@ -29,9 +28,7 @@ BRACKET_TYPES = [NodeType.PAREN, NodeType.SQUARE, NodeType.CURLY]
 
 paren = Bracket(NodeType.PAREN, '()')
 square = Bracket(NodeType.SQUARE, '[]')
-#slash = Bracket(NodeType.SLASH, '/\\')
 curly = Bracket(NodeType.CURLY, '{}')
-#BRACKETS = [paren, square, slash, curly]
 BRACKETS = [paren, square, curly]
 
 def fill_in_form(form, mappings):
@@ -148,7 +145,8 @@ def defmac_get_product(shell, mappings):
     
 #    print(str(form[0].val) + ': ' + str(product_form[0].val)) #Value checking
     
-    shell.macros.append(Macro(form, product_form=product_form))
+#    shell.macros.append(Macro(form, product_form=product_form))
+    shell.register_macro(Macro(form, product_form=product_form))
     shell.sort_macros() #Should add method to Shell for adding and sorting together
     return [] #Evaluates to nothing
 
@@ -270,7 +268,13 @@ DEF_NODE = ParseNode(NodeType.DEF)
 
 class Shell:
     def __init__(self):
-        self.macros = get_builtin_macros(self)
+#        self.macros = get_builtin_macros(self)
+        self.macros = []
+        
+        self.macros_added = 0 #For tracking which macros are older
+        for macro in get_builtin_macros(self):
+            self.register_macro(macro)
+        
 #        print(self.macros)
 
     def matching_bracket_index(self, line, ind):
@@ -344,55 +348,123 @@ class Shell:
             return DEF_NODE
         return ParseNode(NodeType.NORMAL, val=token.replace('`', ''))
 
-    def sort_macros(self):
-        self.macros.sort(key=lambda m:len(m.form))
+    def register_macro(self, macro):
+        self.macros.append(macro)
+        macro.time_added = self.macros_added
+        self.macros_added += 1
+        
+        self.sort_macros()
 
-    def apply_macros(self, nodes): #Takes and returns a list of nodes
+    def sort_macros(self):
+        self.macros.sort(key=lambda m:len(m.form)) #Ascending by length
+        self.macros.sort(key=lambda m:-m.time_added) #Ascending by age
+
+    def apply_macros(self, nodes, verbose=False): #Takes and returns a list of nodes
         self.sort_macros()
         
-        i = 0
         nodes = nodes[:] #Copy to get rid of side effects
         
         changed = False
         
-        for node in nodes: #Interpret inner brackets first
-            
-            while type(node) is list: #Kludge
-                print('LIST')
-                node = node[0]
-            
-            if node.node_type in [NodeType.SQUARE, NodeType.CURLY]:#BRACKET_TYPES:
-                changed = True
-                
-                insides = node.children
-                interpreted, changed = self.apply_macros(insides)
-                if node.node_type is NodeType.SQUARE:
-                    nodes = nodes[0:i] + list(interpreted) + nodes[i+1:] #Put the result in without brackets
-                elif node.node_type is NodeType.CURLY:
-                    interpreted = ParseNode(NodeType.PAREN, children=interpreted)
-                    nodes = nodes[0:i] + [interpreted] + nodes[i+1:] #Put the result in with paren brackets
-            i += 1
-        #Now the expression has no outer square or curly brackets
-        #Only paren
-        #Now we can apply macros
+#        going = True
+#        while going:
+#            going = False
+#            i = 0
+#            
+#            for node in nodes: #Interpret inner brackets first
+#                
+#                while type(node) is list: #Kludge
+#                    print('LIST')
+#                    node = node[0]
+#                
+#                if node.node_type in [NodeType.SQUARE, NodeType.CURLY]:
+#                    changed = True
+#                    going = True
+#                    
+#                    insides = node.children
+#                    interpreted, changed = self.apply_macros(insides)
+#                    if node.node_type is NodeType.SQUARE:
+#                        nodes = nodes[0:i] + list(interpreted) + nodes[i+1:] #Put the result in without brackets
+#                    elif node.node_type is NodeType.CURLY:
+#                        interpreted = ParseNode(NodeType.PAREN, children=interpreted)
+#                        nodes = nodes[0:i] + [interpreted] + nodes[i+1:] #Put the result in with paren brackets
+#                    break #Start all over again
+#                i += 1
+#        #Now the expression has no outer square or curly brackets
+#        #Only paren
+#        #Now we can apply macros
+#        
+#        going = True
+#        while going:
+#            going = False
+#            
+#            for macro in self.macros: #Now the macros will be gone through in order
+#                for i in range(0, len(nodes)): #going through nodes
+#                    matches, captures, length = macro.matches(nodes[i:])
+#                    if matches:
+#                        going = True
+#                        changed = True
+#                        product = macro.get_product(captures)
+#                        if verbose:
+#                            print('***** ' + macro.name + ' *****')
+#                            print(nodes)
+#                        nodes = nodes[0:i] + product + nodes[i+length:]
+#                        if verbose:
+#                            print('*****')
+#                            print(nodes)
+#                            print('*' * (12 + len(macro.name)))
+#                            print('')
+#                        break #Go back to the smallest macros
+#                if going:
+#                    break
         
         going = True
         while going:
             going = False
+            i = 0
             
-            for macro in self.macros: #Now the macros will be gone through in order
-                for i in range(0, len(nodes)): #going through nodes
-#                    print('Length: ' + str(len(macro.form)))
-                    matches, captures, length = macro.matches(nodes[i:])
-                    if matches:
-#                        print(macro.name)
-                        going = True
-                        changed = True
-                        product = macro.get_product(captures)
-                        nodes = nodes[0:i] + product + nodes[i+length:]
-                        break #Go back to the smallest macros
-                if going:
-                    break
+            for node in nodes: #Interpret inner brackets first
+                
+                while type(node) is list: #Kludge
+                    print('LIST')
+                    node = node[0]
+                
+                if node.node_type in [NodeType.SQUARE, NodeType.CURLY]:
+                    changed = True
+                    going = True
+                    
+                    insides = node.children
+                    interpreted, changed = self.apply_macros(insides)
+                    if node.node_type is NodeType.SQUARE:
+                        nodes = nodes[0:i] + list(interpreted) + nodes[i+1:] #Put the result in without brackets
+                    elif node.node_type is NodeType.CURLY:
+                        interpreted = ParseNode(NodeType.PAREN, children=interpreted)
+                        nodes = nodes[0:i] + [interpreted] + nodes[i+1:] #Put the result in with paren brackets
+                    break #Start all over again
+                i += 1
+            #Now the expression has no outer square or curly brackets
+            #Only paren
+            #Now we can apply macros
+            if not going:
+                for macro in self.macros: #Now the macros will be gone through in order
+                    for i in range(0, len(nodes)): #going through nodes
+                        matches, captures, length = macro.matches(nodes[i:])
+                        if matches:
+                            going = True
+                            changed = True
+                            product = macro.get_product(captures)
+                            if verbose:
+                                print('***** ' + macro.name + ' *****')
+                                print(nodes)
+                            nodes = nodes[0:i] + product + nodes[i+length:]
+                            if verbose:
+                                print('*****')
+                                print(nodes)
+                                print('*' * (12 + len(macro.name)))
+                                print('')
+                            break #Go back to the smallest macros
+                    if going:
+                        break
                 
         return nodes, changed
 
@@ -405,9 +477,9 @@ class Shell:
         if verbose:
             print(nodes)
         
-        changed = True
-        while changed:
-            nodes, changed = self.apply_macros(nodes)
+#        changed = True
+#        while changed:
+        nodes, changed = self.apply_macros(nodes)
 #            print('')
 #            print(nodes)
         
