@@ -141,6 +141,8 @@ def defmac_get_product(shell, mappings):
     form = unpack_and_wrap_node(form)
     product_form = unpack_and_wrap_node(product_form)
     
+#    print(str(form[0].val) + ': ' + str(product_form[0].val)) #Value checking
+    
     shell.macros.append(Macro(form, product_form=product_form))
     shell.sort_macros() #Should add method to Shell for adding and sorting together
     return [] #Evaluates to nothing
@@ -180,7 +182,7 @@ def binary_macro_get_product(mappings, op):
     v2 = mappings['b'].val
     
     val = op(v1, v2)
-    return [ParseNode(NodeType.NORMAL, val=val)]
+    return [ParseNode(NodeType.NORMAL, val=str(val))]
 
 def get_binary_macro(name, op):
     form = [ParseNode(NodeType.CAPTURE, val='a'),
@@ -191,46 +193,37 @@ def get_binary_macro(name, op):
                  name=name,
                  get_product=lambda maps: binary_macro_get_product(maps, op))
 
-def pop_macro_get_product(mappings):
+
+def print_macro_get_product(mappings):
+    node = mappings['a']
+    print(node)
+    return []
+
+def get_print_macro():
+    form = [ParseNode(NodeType.NORMAL, val='pr'), ParseNode(NodeType.CAPTURE, val='a')]
+    return Macro(form=form, name='pr', get_product=print_macro_get_product)
+
+def unw_macro_get_product(mappings):
     node = mappings['a']
     return node.children
 
-def get_pop_macro():
-    form = [ParseNode(NodeType.NORMAL, val='pop'), ParseNode(NodeType.CAPTURE, val='a')]
-    return Macro(form=form, name='pop', get_product=pop_macro_get_product)
-
-#def add_macro_get_product(mappings):
-#    n1 = mappings['a']
-#    n2 = mappings['b']
-#    
-#    val = float(n1.val) + float(n2.val)
-#    
-#    return [ParseNode(NodeType.NORMAL, val=str(val))]
-#
-#def get_add_macro():
-#    form = [ParseNode(NodeType.CAPTURE, val='a'),
-#            ParseNode(NodeType.NORMAL, val='+'),
-#            ParseNode(NodeType.CAPTURE, val='b')]
-#    return Macro(form=form, get_product=add_macro_get_product)
+def get_unw_macro():
+    form = [ParseNode(NodeType.NORMAL, val='unw'), ParseNode(NodeType.CAPTURE, val='a')]
+    return Macro(form=form, name='unw', get_product=unw_macro_get_product)
 
 def get_builtin_macros(shell):
     return [get_defmac_macro(shell),
             get_to_bool_macro(),
-            get_pop_macro(),
+            get_print_macro(),
+            get_unw_macro(),
             get_binary_macro('+', lambda a,b:float(a) + float(b)),
             get_binary_macro('-', lambda a,b:float(a) - float(b)),
             get_binary_macro('*', lambda a,b:float(a) * float(b)),
-            get_binary_macro('/', lambda a,b:float(a) / float(b))]
+            get_binary_macro('/', lambda a,b:float(a) / float(b)),
+            get_binary_macro('>', lambda a,b:float(a) > float(b)),
+            get_binary_macro('<', lambda a,b:float(a) < float(b))]
 ###End Built-in macros
 
-###Macro has the matches method
-###Takes the expression to match
-###Returns whether it matches,the captured nodes, and the length of the match
-###It may also have side effects for certain built-in macros
-
-###Macro also has the result method
-###Takes the captured nodes
-###Returns the new expression
 
 class ParseNode:
     def __init__(self, node_type, val='', children=[]):
@@ -386,19 +379,32 @@ class Shell:
         #Only paren
         #Now we can apply macros
         
-        for i in range(0, len(nodes)): #going through nodes
-            for macro in self.macros:
-#                print('Length: ' + str(len(macro.form)))
-                matches, captures, length = macro.matches(nodes[i:])
-                if matches:
-#                    print(macro)
-                    changed = True
-                    product = macro.get_product(captures)
-                    nodes = nodes[0:i] + product + nodes[i+length:]
-#                    print(nodes)
-#                    print('*****')
-#                i += 1
-#            print('***')
+#        for i in range(0, len(nodes)): #going through nodes
+#            for macro in self.macros:
+#                matches, captures, length = macro.matches(nodes[i:])
+#                if matches:
+#                    changed = True
+#                    product = macro.get_product(captures)
+#                    nodes = nodes[0:i] + product + nodes[i+length:]
+        
+        going = True
+        
+        while going:
+            going = False
+            
+            for macro in self.macros: #Now the macros will be gone through in order
+                for i in range(0, len(nodes)): #going through nodes
+#                    print('Length: ' + str(len(macro.form)))
+                    matches, captures, length = macro.matches(nodes[i:])
+                    if matches:
+#                        print(macro.name)
+                        going = True
+                        changed = True
+                        product = macro.get_product(captures)
+                        nodes = nodes[0:i] + product + nodes[i+length:]
+                        break #Go back to the smallest macros
+                if going:
+                    break
                 
         return nodes, changed
 
