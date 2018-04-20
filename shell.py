@@ -11,6 +11,6 @@ s = om.Shell()
 
 while True:
     line = input('LINE:')
-    print('interpreting: ' + line)
-    print('')
+#    print('interpreting: ' + line)
+#    print('')
     s.interpret(line)

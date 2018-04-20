@@ -76,7 +76,7 @@ class Macro:
     def __str__(self):
         return self.name
     
-    def matches(self, expr, form=None, mappings=None):#Whether this macro matches the given expression, starting at the left
+    def matches(self, expr, form=None, mappings=None, exact=False):#Whether this macro matches the given expression, starting at the left
 #        print('matches running')
         
         form = self.form if form == None else form
@@ -90,6 +90,11 @@ class Macro:
 #        print('***')
         
         if len(expr) < len(form):
+            return not_matches
+        
+        #For an exact match, the expr and the form must be the same length
+        if exact and len(expr) > len(form):
+            print('EXACT FAIL')
             return not_matches
         
 #        print('Checking nodes')
@@ -111,7 +116,7 @@ class Macro:
                 else: #Capture this node
                     mappings[name] = node
             elif to_match.node_type is NodeType.PAREN: #A list
-                does_match, mappings, length = self.matches(node.children, form=to_match.children, mappings=mappings)
+                does_match, mappings, length = self.matches(node.children, form=to_match.children, mappings=mappings, exact=True)
                 if not does_match:
                     return not_matches
             elif to_match.node_type is NodeType.NORMAL:
@@ -339,14 +344,6 @@ class Shell:
             return DEF_NODE
         return ParseNode(NodeType.NORMAL, val=token.replace('`', ''))
 
-#    def apply_macros(self, tokens): #Takes parsed tokens
-#        for token in tokens:
-#            if token.node_type is NodeType.NORMAL:
-#                if token.val in self.macros:
-#                    token.val = self.macros[token.val]
-#                    return True
-##            if token.node_type 
-
     def sort_macros(self):
         self.macros.sort(key=lambda m:len(m.form))
 
@@ -379,16 +376,7 @@ class Shell:
         #Only paren
         #Now we can apply macros
         
-#        for i in range(0, len(nodes)): #going through nodes
-#            for macro in self.macros:
-#                matches, captures, length = macro.matches(nodes[i:])
-#                if matches:
-#                    changed = True
-#                    product = macro.get_product(captures)
-#                    nodes = nodes[0:i] + product + nodes[i+length:]
-        
         going = True
-        
         while going:
             going = False
             
