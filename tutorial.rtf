@@ -1,0 +1,202 @@
+{\rtf1\ansi\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Courier New;}}
+{\*\generator Riched20 10.0.16299}\viewkind4\uc1 
+\pard\f0\fs22\lang1033 # OM\par
+\tab\par
+
+\pard\qc\tab\fs36 Introduction\fs22\par
+
+\pard\tab\par
+\tab OM is a programming language built on macros. OM stands for "Only Macros".\par
+\par
+
+\pard\qc\fs36 OM Expressions\fs22\par
+\par
+
+\pard\tab An expression in OM is made up of brackets and tokens. For example:\par
+\tab (a b c)\par
+\tab ([a b] dfg \{toop\})\par
+Are all valid expressions. The valid brackets are (), [] and \{\}. Tokens can have any characters in them except for whitespace. Brackets can be included in tokens only if they are preceded with "`" (back tick).\par
+\tab An expression in OM, after being parsed, is represented as a list of nodes. Nodes that represent brackets in turn have a list of nodes as their children. Nodes that are not brackets will have a value. For example, "a b (c d)" will be parsed as three nodes - a node with the value "a", a node with the value "b", and a PAREN node with "c" and "d" nodes as children.\par
+\par
+
+\pard\qc\fs36 Macros\fs22\par
+
+\pard\par
+\tab All action in OM is done by evaluating macros. Even defining a macro is done by evaluating the DEFMAC macro. It is worth mentioning that the macros in OM are not like C or LISP macros. C macros are text substitution, while OM macros substitute parse-trees for other parse-trees. LISP macros are like OM macros in that they operate on s-expressions (the inspiration for OM parse-trees), but LISP macros are always called by typing the name of the macro and then the parameters. For example:\par
+\tab (cool-macro a b c)\par
+would call cool-macro with a, b and c as parameters. On the other hand, OM macros, instead of having a name they are called with, have a form. A form is just an OM expression (perhaps with CAPTURE nodes, more on those later). If part of an OM expression being evaluated matches a macro's form, then the macro will replace that part with the product of the macro.\par
+\tab A few examples are in order, but first, some syntax. A macro is defined like this:\par
+\tab (a b c) -> (c b a)\par
+A expression wrapped in (), an arrow, and another expression in (). This macro will replace an "a" node, a "b" node and a "c" node, in that order, with a "c" node, a "b" node, and an "a" node. A, b and c are \i not\i0  parameters in this macro. They are specific nodes.\par
+\tab Suppose that you evaluate this OM expression after defining that macro:\par
+\tab a b c abc aa b c \par
+Then it will become\par
+\tab c b a abc aa b c\par
+The macro does not check for text matches, so "aa b c" does not become "ac b a". It checks for an "a" node, a "b" node, and a "c" node in that order. Likewise, "abc" does not become "cba". Also note that the macro does not check for a, b and c in parentheses, in checks for them outside of parentheses. The outermost parenthese in\par
+\tab (a b c) -> (c b a)\par
+are not part of the macro at all. They just separate the form and the product of the macro from the rest of the OM-expression they might be in. If parentheses were not used, then\par
+\tab a b c -> c b a\par
+could define a macro that replaces "c" with "c", or "b c" with "c b", or anything else. It wouldn't be clear what is part of the macro definition and what isn't.\par
+\tab Suppose you do want to have a macro check for something in parentheses, say (cool list), and replace it with something else, like (cooler list). This is simple to do:\par
+\tab ( (cool list) ) -> ( (cooler list) )\par
+Just put the form and product in another layer of parentheses.\par
+\tab So far the macros we have are pretty inflexible. They can only replace one certain expression with another one. We need a way for macros to have parameteres. Capture nodes provide that way.\par
+\tab Consider the following macro:\par
+\tab (swap ~a ~b) -> (~b ~a)\par
+See if you can guess what it does (stop reading now if you want to.). Suppose we interpret this OM expression:\par
+\tab swap the top\par
+It will become:\par
+\tab top the\par
+A CAPTURE node, represented by a ~ followed by a name, can match anything (but only one thing at a time). A CAPTURE node with the same name can then be use again in the product to represent what was captured. In the example above, when the form "swap ~a ~b" was compared with "swap the top", ~a was bound to "the" and ~b to "top". Then, ~a and ~b in the product of the macro ("~b ~a") were replaced with "the" and "top", yielding "top the".\par
+\tab Here are two interesting macros:\par
+\tab (cond ~a True ~b) -> (~a)\par
+\tab (conb ~a False ~b) -> (~b)\par
+we already can do conditionals (True and False are just normal tokens. They're not special boolean values.).\par
+\par
+
+\pard\qc\fs36 OM Expressions, Part Two\par
+\par
+
+\pard\fs22\tab It will be useful to know the exact structure of OM expressions. As said before, an OM expression is a list of nodes. Each node has a string value and a list of child nodes (earlier, I only said that normal nodes have values and that parenthesis nodes have children. That was practically true, as normal nodes have an empty child-list and parenthesis nodes have "" as their value.). Each node also has a type. These are all the types:\par
+\tab PAREN\tab\tab Has what's inside the () as children. Macros are \tab\tab\tab not evaluated on its children (although they can \tab\tab\tab "see" its children)\par
+\tab\par
+\tab SQUARE\tab Macros are evaluated on what's inside [], and \tab\tab\tab\tab before anything else (although not necessarily \tab\tab\tab\tab before things inside \{\}). Once the insides are \tab\tab\tab\tab evaluate, they are put into whatever OM \tab\tab\tab\tab\tab expression the [] was in without a PAREN node \tab\tab\tab\tab around them.\par
+\tab\par
+\tab CURLY\tab\tab Macros are evaluated on what's inside \{\} with \tab\tab\tab\tab the same priority as []. When they're evaluated, \tab\tab\tab they're put into the OM expression the \{\} was in \tab\tab\tab WITH a PAREN node around them.\par
+\tab\par
+\tab CAPTURE\tab Represented as ~*. Used in macros. \par
+\tab\par
+\tab DEF\tab\tab Represented with ->. Used for defining macros.\par
+\tab\par
+\tab NORMAL\tab Represented with a token not starting with ~. \tab\tab\tab\tab Hold the token they're represented with as their \tab\tab\tab value.\par
+\par
+\tab Now we will see what OM expressions some snippets of OM code represent.\par
+\tab (a b c (d e f)) gh i\par
+becomes (with values after node types and children indented on their own line):\par
+\tab PAREN\par
+\tab\tab NORMAL a\par
+\tab\tab NORMAL b\par
+\tab\tab NORMAL c\par
+\tab\tab PAREN\par
+\tab\tab\tab NORMAL d\par
+\tab\tab\tab NORMAL e\par
+\tab\tab\tab NORMAL f\par
+\tab NORMAL gh\par
+\tab NORMAL i\par
+\par
+\tab [cool \{cooler (coolest?)\}]\par
+becomes\par
+\tab SQUARE\par
+\tab\tab NORMAL cool\par
+\tab\tab CURLY\par
+\tab\tab\tab NORMAL cooler\par
+\tab\tab\tab PAREN\par
+\tab\tab\tab\tab NORMAL coolest?\par
+\par
+\tab (a b c) -> (c b a)\par
+becomes\par
+\tab PAREN\par
+\tab\tab NORMAL a\par
+\tab\tab NORMAL b\par
+\tab\tab NORMAL c\par
+\tab DEF\par
+\tab PAREN\par
+\tab\tab NORMAL c\par
+\tab\tab NORMAL b\par
+\tab\tab NORMAL a\par
+\par
+\tab (swap ~a ~b) -> (~b ~a)\par
+becomes\par
+\tab PAREN\par
+\tab\tab NORMAL swap\par
+\tab\tab CAPTURE a\par
+\tab\tab CAPTURE b\par
+\tab DEF\par
+\tab PAREN\par
+\tab\tab CAPTURE b\par
+\tab\tab CAPTURE a\par
+\par
+Those are enough examples.\par
+\par
+
+\pard\qc\fs36 More on Macros\par
+
+\pard\fs22\par
+There are several built-in macros. Here is a list of them.\par
+\par
+Name\tab\tab\tab Form\tab\tab\tab Product\par
+DEFMAC\tab\tab ~a -> ~b\tab\tab Consumes the nodes it matches\par
+\tab\tab\tab    OR\tab\tab\tab and makes a macro from them.\par
+\tab\tab\tab (~a) -> (~b)\par
+\par
+UNW\tab\tab\tab unw ~a\tab\tab ~a must be a PAREN node. Gives\par
+\tab\tab\tab\tab\tab\tab the children of ~a as its \tab\tab\tab\tab\tab\tab\tab\tab product.\par
+\par
+BOOL\tab\tab\tab bool ~a\tab\tab Converts ~a to True or False,\par
+\tab\tab\tab\tab\tab\tab depending on its value.\par
+\par
+PR\tab\tab\tab pr ~a\tab\tab\tab Prints the value of ~a.\par
+\par
++, -, /,\tab\tab ~a op ~b\tab\tab Gives the value of the op\par
+*, %, **,\tab\tab\tab\tab\tab applied to ~a and ~b. ** is\par
+>, <, >=,\tab\tab\tab\tab\tab exponentiation, % is modulo.\par
+<=\par
+\par
+Now let's use these macros to make some programs.\par
+\tab We'll want a conditional first. It should be able to choose between an arbitrary OM expression and another arbitrary OM expression. To do that, it will need the expressions to be contained in PAREN, so the form will look like this:\par
+\tab (cond ~a boolean-value ~b)\par
+where ~a and ~b will be assumed to be PAREN. We want the expression to evaluate to ~a if boolean-value is True and to ~b if it is False. The easiest (only?) way to do this is with two macros:\par
+\tab (cond ~a True ~b) -> (unw ~a)\par
+\tab (cond ~a False ~b) -> (unw ~b)\par
+This demonstrates the power of macros having forms instead of names. We can make a conditional without needing one to be built in. (N.B: In an earlier stage of the language, /\\ brackets would act like this, so ~a /boolean-value\\ ~b would be the conditional. I scrapped that idea as soon as I realized conditionals could be made with two macros. I also had <> act as brackets where the insides would have macros evaluated on them \i and\i0  interpreted. Those were unnecessary once I decided that \i all\i0  action would be done by evaluating macros. I also really needed /, < and > for math.)\par
+\tab Now let's try to build a for loop. The form will look like this:\par
+\tab (~a ~n times)\par
+We will define it using recursion, but first, another bit of syntax: "|" cannot be evaluated by a macro, not even by a capture. It is useful for separating expressions. Here's the definition:\par
+\tab (~a ~n times) -> ( cond ([unw ~a ] | ~a [~n - 1] times) [bool [~n > 0]] () )\par
+Let's walk through this definition. Suppose we type\par
+\tab (1) 3 times\par
+Then that becomes\par
+\tab cond ([unw (1)] | (1) [3 - 1] times) [bool [3 > 0]] ()\par
+and then, going left to right, evaluating [] (and \{\}) first,\par
+\tab [bool [3 > 0]]\par
+becomes\par
+\tab [bool True]\par
+becomes\par
+\tab True\par
+so the whole expression becomes\par
+
+\pard\tab cond ([unw (1)] | (1) [3 - 1] times) True ()\par
+and then by the definition of cond, this turns into\par
+\tab [unw (1)] | (1) [3 - 1] times\par
+and then\par
+\tab [unw (1)]\par
+becomes\par
+\tab 1\par
+so we the have\par
+\tab 1 | (1) [3 - 1] times\par
+which becomes\par
+\tab 1 | (1) 2 times\par
+skipping several steps, we have\par
+\tab 1 | 1 | (1) 1 times\tab\tab (yes, I know. "1 times.")\par
+and then\par
+\tab 1 | 1 | 1 |\par
+as we expected.\par
+\par
+\tab So far we've been able to build a two control constructs purely out of pattern-matching macros, captures, and a few built in macros (and "|"). We can do more:\par
+\tab\par
+\tab (~a while ~b) -> (cond ([unw ~a] | ~a while ~b) unw ([bool [unw ~b]]) () )\par
+\par
+\tab (fibonacci ~n) -> (infib [~n + 0]) #Force to decimal\par
+\tab (infib ~n) -> ([infib [~n - 1]] + [infib [~n - 2]])\par
+\tab (infib 0.0) -> (1.0)\par
+\tab (infib 1.0) -> (1.0)\par
+\par
+Macros defined more recently are evaluated before ones defined earlier. This is useful for special cases, as above (Shorter macros are also always evaluated before longer ones).\par
+\par
+I'm sure you could get polymorphism.\par
+\tab\par
+
+\pard\par
+\par
+}
+ 
