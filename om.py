@@ -132,9 +132,8 @@ class Macro:
 def unpack_and_wrap_node(node):
     if node.node_type is NodeType.PAREN:
         return node.children
-#    return node
     return [node]
-
+#********************
 def defmac_get_product(shell, mappings):
     
     form = mappings['FORM']
@@ -143,9 +142,6 @@ def defmac_get_product(shell, mappings):
     form = unpack_and_wrap_node(form)
     product_form = unpack_and_wrap_node(product_form)
     
-#    print(str(form[0].val) + ': ' + str(product_form[0].val)) #Value checking
-    
-#    shell.macros.append(Macro(form, product_form=product_form))
     shell.register_macro(Macro(form, product_form=product_form))
     shell.sort_macros() #Should add method to Shell for adding and sorting together
     return [] #Evaluates to nothing
@@ -155,7 +151,7 @@ def get_defmac_macro(shell):
     return Macro(form=form,
                  name='DEFMAC',
                  get_product=lambda maps: defmac_get_product(shell, maps))
-
+#********************
 def to_bool_get_product(mappings): #Improve
     node = mappings['a']
     t_node = [ParseNode(NodeType.NORMAL, val='True')]
@@ -171,15 +167,12 @@ def to_bool_get_product(mappings): #Improve
             return f_node
     except ValueError:
         pass
-#    if node.val in ['0', '', '0.0']:
-#        return f_node
-#    print(node.val)
     return t_node
 
 def get_to_bool_macro():
     form = [ParseNode(NodeType.NORMAL, val='bool'), ParseNode(NodeType.CAPTURE, val='a')]
     return Macro(form=form, name='TO_BOOL', get_product=to_bool_get_product)
-
+#********************
 def binary_macro_get_product(mappings, op):
     v1 = mappings['a'].val
     v2 = mappings['b'].val
@@ -196,16 +189,16 @@ def get_binary_macro(name, op):
                  name=name,
                  get_product=lambda maps: binary_macro_get_product(maps, op))
 
-
+#********************
 def print_macro_get_product(mappings):
     node = mappings['a']
-    print(node)
+    print(node.val)
     return []
 
 def get_print_macro():
     form = [ParseNode(NodeType.NORMAL, val='pr'), ParseNode(NodeType.CAPTURE, val='a')]
     return Macro(form=form, name='pr', get_product=print_macro_get_product)
-
+#********************
 def unw_macro_get_product(mappings):
     node = mappings['a']
     return node.children
@@ -213,7 +206,7 @@ def unw_macro_get_product(mappings):
 def get_unw_macro():
     form = [ParseNode(NodeType.NORMAL, val='unw'), ParseNode(NodeType.CAPTURE, val='a')]
     return Macro(form=form, name='unw', get_product=unw_macro_get_product)
-
+#********************
 def get_builtin_macros(shell):
     return [get_defmac_macro(shell),
             get_to_bool_macro(),
@@ -222,9 +215,13 @@ def get_builtin_macros(shell):
             get_binary_macro('+', lambda a,b:float(a) + float(b)),
             get_binary_macro('-', lambda a,b:float(a) - float(b)),
             get_binary_macro('*', lambda a,b:float(a) * float(b)),
+            get_binary_macro('**', lambda a,b:float(a) ** float(b)),
+            get_binary_macro('%', lambda a,b:float(a) % float(b)),
             get_binary_macro('/', lambda a,b:float(a) / float(b)),
             get_binary_macro('>', lambda a,b:float(a) > float(b)),
-            get_binary_macro('<', lambda a,b:float(a) < float(b))]
+            get_binary_macro('<', lambda a,b:float(a) < float(b)),
+            get_binary_macro('>=', lambda a,b:float(a) >= float(b)),
+            get_binary_macro('<=', lambda a,b:float(a) <= float(b))]
 ###End Built-in macros
 
 
@@ -259,10 +256,6 @@ class ParseNode:
     
     def __ne__(self, other):
         return not self == other
-    
-#    def __neq__(self, other):
-#        print('NEQ')
-#        return not self == other
         
 DEF_NODE = ParseNode(NodeType.DEF)
 
@@ -356,8 +349,8 @@ class Shell:
         self.sort_macros()
 
     def sort_macros(self):
-        self.macros.sort(key=lambda m:len(m.form)) #Ascending by length
-        self.macros.sort(key=lambda m:-m.time_added) #Ascending by age
+        self.macros.sort(key=lambda m:-m.time_added) #Ascending by age - secondary
+        self.macros.sort(key=lambda m:len(m.form)) #Ascending by length - primary
 
     def apply_macros(self, nodes, verbose=False): #Takes and returns a list of nodes
         self.sort_macros()
@@ -366,58 +359,7 @@ class Shell:
         
         changed = False
         
-#        going = True
-#        while going:
-#            going = False
-#            i = 0
-#            
-#            for node in nodes: #Interpret inner brackets first
-#                
-#                while type(node) is list: #Kludge
-#                    print('LIST')
-#                    node = node[0]
-#                
-#                if node.node_type in [NodeType.SQUARE, NodeType.CURLY]:
-#                    changed = True
-#                    going = True
-#                    
-#                    insides = node.children
-#                    interpreted, changed = self.apply_macros(insides)
-#                    if node.node_type is NodeType.SQUARE:
-#                        nodes = nodes[0:i] + list(interpreted) + nodes[i+1:] #Put the result in without brackets
-#                    elif node.node_type is NodeType.CURLY:
-#                        interpreted = ParseNode(NodeType.PAREN, children=interpreted)
-#                        nodes = nodes[0:i] + [interpreted] + nodes[i+1:] #Put the result in with paren brackets
-#                    break #Start all over again
-#                i += 1
-#        #Now the expression has no outer square or curly brackets
-#        #Only paren
-#        #Now we can apply macros
-#        
-#        going = True
-#        while going:
-#            going = False
-#            
-#            for macro in self.macros: #Now the macros will be gone through in order
-#                for i in range(0, len(nodes)): #going through nodes
-#                    matches, captures, length = macro.matches(nodes[i:])
-#                    if matches:
-#                        going = True
-#                        changed = True
-#                        product = macro.get_product(captures)
-#                        if verbose:
-#                            print('***** ' + macro.name + ' *****')
-#                            print(nodes)
-#                        nodes = nodes[0:i] + product + nodes[i+length:]
-#                        if verbose:
-#                            print('*****')
-#                            print(nodes)
-#                            print('*' * (12 + len(macro.name)))
-#                            print('')
-#                        break #Go back to the smallest macros
-#                if going:
-#                    break
-        
+        #Whenever a bracket or macro is evaluated, we go back to the top
         going = True
         while going:
             going = False
@@ -440,11 +382,11 @@ class Shell:
                     elif node.node_type is NodeType.CURLY:
                         interpreted = ParseNode(NodeType.PAREN, children=interpreted)
                         nodes = nodes[0:i] + [interpreted] + nodes[i+1:] #Put the result in with paren brackets
-                    break #Start all over again
+                    break
                 i += 1
             #Now the expression has no outer square or curly brackets
             #Only paren
-            #Now we can apply macros
+            #So now we can apply macros
             if not going:
                 for macro in self.macros: #Now the macros will be gone through in order
                     for i in range(0, len(nodes)): #going through nodes
@@ -477,29 +419,9 @@ class Shell:
         if verbose:
             print(nodes)
         
-#        changed = True
-#        while changed:
         nodes, changed = self.apply_macros(nodes)
-#            print('')
-#            print(nodes)
         
         if verbose:
             print('After macros:')
-#        print('***')
+            
         print(nodes)
-        #while self.apply_macros(tokens): #Go until no more
-        #    pass
-        #print(tokens)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
