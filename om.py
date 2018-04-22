@@ -199,6 +199,18 @@ def get_print_macro():
     form = [ParseNode(NodeType.NORMAL, val='pr'), ParseNode(NodeType.CAPTURE, val='a')]
     return Macro(form=form, name='pr', get_product=print_macro_get_product)
 #********************
+def ind_macro_get_product(mappings):
+    i = int(mappings['i'].val)
+    l = mappings['l'].children
+    return [l[i]]
+
+def get_ind_macro():
+    form = [ParseNode(NodeType.NORMAL, val='ind'),
+            ParseNode(NodeType.CAPTURE, val='i'),
+            ParseNode(NodeType.CAPTURE, val='l')]
+    return Macro(form=form, name='ind', get_product=ind_macro_get_product)
+
+#********************
 def unw_macro_get_product(mappings):
     node = mappings['a']
     return node.children
@@ -207,11 +219,21 @@ def get_unw_macro():
     form = [ParseNode(NodeType.NORMAL, val='unw'), ParseNode(NodeType.CAPTURE, val='a')]
     return Macro(form=form, name='unw', get_product=unw_macro_get_product)
 #********************
+def len_macro_get_product(mappings):
+    node = mappings['l']
+    return [ParseNode(NodeType.NORMAL, val=str(len(node.children)))]
+
+def get_len_macro():
+    form = [ParseNode(NodeType.NORMAL, val='len'), ParseNode(NodeType.CAPTURE, val='l')]
+    return Macro(form=form, name='len', get_product=len_macro_get_product)
+#********************
 def get_builtin_macros(shell):
     return [get_defmac_macro(shell),
             get_to_bool_macro(),
             get_print_macro(),
+            get_ind_macro(),
             get_unw_macro(),
+            get_len_macro(),
             get_binary_macro('+', lambda a,b:float(a) + float(b)),
             get_binary_macro('-', lambda a,b:float(a) - float(b)),
             get_binary_macro('*', lambda a,b:float(a) * float(b)),
@@ -350,7 +372,7 @@ class Shell:
 
     def sort_macros(self):
         self.macros.sort(key=lambda m:-m.time_added) #Ascending by age - secondary
-        self.macros.sort(key=lambda m:len(m.form)) #Ascending by length - primary
+        self.macros.sort(key=lambda m:-len(m.form)) #Descending by length - primary
 
     def apply_macros(self, nodes, verbose=False): #Takes and returns a list of nodes
         self.sort_macros()

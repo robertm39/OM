@@ -20,7 +20,7 @@ s.interpret('n -> 10')
 
 print('**********')
 
-s.interpret('([pr [n ** 2]] [(n) -> {n - 1}]) while (n >= 0)')
+s.interpret('([pr [[n] ** 2]] [(n) -> {[n] - 1}]) while ([n] >= 0)')
 
 #s.interpret('**********')
 #s.interpret('10')

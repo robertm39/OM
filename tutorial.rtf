@@ -135,6 +135,8 @@ UNW\tab\tab\tab unw ~a\tab\tab ~a must be a PAREN node. Gives\par
 BOOL\tab\tab\tab bool ~a\tab\tab Converts ~a to True or False,\par
 \tab\tab\tab\tab\tab\tab depending on its value.\par
 \par
+IND\tab\tab\tab ind ~i ~l\tab\tab Gives the ~i`th value of ~l.\par
+\par
 PR\tab\tab\tab pr ~a\tab\tab\tab Prints the value of ~a.\par
 \par
 +, -, /,\tab\tab ~a op ~b\tab\tab Gives the value of the op\par
@@ -152,7 +154,7 @@ This demonstrates the power of macros having forms instead of names. We can make
 \tab Now let's try to build a for loop. The form will look like this:\par
 \tab (~a ~n times)\par
 We will define it using recursion, but first, another bit of syntax: "|" cannot be evaluated by a macro, not even by a capture. It is useful for separating expressions. Here's the definition:\par
-\tab (~a ~n times) -> ( cond ([unw ~a ] | ~a [~n - 1] times) [bool [~n > 0]] () )\par
+\tab (~a ~n times) -> ( cond ([unw ~a ] | ~a [[~n] - 1] times) [bool [[~n] > 0]] () )\par
 Let's walk through this definition. Suppose we type\par
 \tab (1) 3 times\par
 Then that becomes\par
@@ -186,12 +188,12 @@ as we expected.\par
 \tab\par
 \tab (~a while ~b) -> (cond ([unw ~a] | ~a while ~b) unw ([bool [unw ~b]]) () )\par
 \par
-\tab (fibonacci ~n) -> (infib [~n + 0]) #Force to decimal\par
-\tab (infib ~n) -> ([infib [~n - 1]] + [infib [~n - 2]])\par
+\tab (fibonacci ~n) -> (infib [[~n] + 0]) #Force to decimal\par
+\tab (infib ~n) -> ([infib [[~n] - 1]] + [infib [[~n] - 2]])\par
 \tab (infib 0.0) -> (1.0)\par
 \tab (infib 1.0) -> (1.0)\par
 \par
-Macros defined more recently are evaluated before ones defined earlier. This is useful for special cases, as above (Shorter macros are also always evaluated before longer ones).\par
+Macros defined more recently are evaluated before ones defined earlier. This is useful for special cases, as above (Longer macros are also always evaluated before shorter ones).\par
 \par
 I'm sure you could get polymorphism.\par
 \tab\par
