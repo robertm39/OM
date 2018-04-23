@@ -152,6 +152,29 @@ def get_defmac_macro(shell):
                  name='DEFMAC',
                  get_product=lambda maps: defmac_get_product(shell, maps))
 #********************
+def loc_macro_get_product(shell, mappings):
+    def make_local(name, node_id, prog): #Modifies the passed object
+        for node in prog:
+            if node.node_type is NodeType.NORMAL:
+                if node.val == name:
+                    node.id = node_id #Make into a local node
+            if node.node_type in BRACKET_TYPES:
+                make_local(name, node_id, node.children)
+    
+    node_id = shell.take_id()
+    name = mappings['name'].val
+    prog = mappings['prog'].children
+    make_local(name, node_id, prog)
+    return prog
+
+def get_loc_macro(shell):
+    form = [ParseNode(NodeType.NORMAL, val='loc'),
+            ParseNode(NodeType.CAPTURE, val='name'),
+            ParseNode(NodeType.CAPTURE, val='prog')]
+    return Macro(form=form,
+                 name='LOC',
+                 get_product = lambda maps: loc_macro_get_product(shell, maps))
+#********************
 def to_bool_get_product(mappings): #Improve
     node = mappings['a']
     t_node = [ParseNode(NodeType.NORMAL, val='True')]
@@ -229,6 +252,7 @@ def get_len_macro():
 #********************
 def get_builtin_macros(shell):
     return [get_defmac_macro(shell),
+            get_loc_macro(shell),
             get_to_bool_macro(),
             get_print_macro(),
             get_ind_macro(),
@@ -274,6 +298,11 @@ class ParseNode:
             return False
         if self.children != other.children:
             return False
+        if hasattr(self, 'id') != hasattr(other, 'id'):
+            return False
+        if hasattr(self, 'id') and hasattr(other, 'id'):
+            if self.id != other.id:
+                return False
         return True
     
     def __ne__(self, other):
@@ -285,12 +314,17 @@ class Shell:
     def __init__(self):
 #        self.macros = get_builtin_macros(self)
         self.macros = []
-        
+        self.current_id = 0
         self.macros_added = 0 #For tracking which macros are older
         for macro in get_builtin_macros(self):
             self.register_macro(macro)
         
 #        print(self.macros)
+
+    def take_id(self):
+        result = self.current_id
+        self.current_id += 1
+        return result
 
     def matching_bracket_index(self, line, ind):
         bracket = line[ind]

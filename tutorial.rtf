@@ -1,7 +1,6 @@
-{\rtf1\ansi\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Courier New;}}
+{\rtf1\ansi\ansicpg1252\deff0\nouicompat{\fonttbl{\f0\fnil\fcharset0 Courier New;}}
 {\*\generator Riched20 10.0.16299}\viewkind4\uc1 
-\pard\f0\fs22\lang1033 # OM\par
-\tab\par
+\pard\f0\fs22\lang1033\par
 
 \pard\qc\tab\fs36 Introduction\fs22\par
 
@@ -129,15 +128,21 @@ DEFMAC\tab\tab ~a -> ~b\tab\tab Consumes the nodes it matches\par
 \tab\tab\tab    OR\tab\tab\tab and makes a macro from them.\par
 \tab\tab\tab (~a) -> (~b)\par
 \par
-UNW\tab\tab\tab unw ~a\tab\tab ~a must be a PAREN node. Gives\par
-\tab\tab\tab\tab\tab\tab the children of ~a as its \tab\tab\tab\tab\tab\tab\tab\tab product.\par
+LOC\tab\tab\tab loc ~name ~prog\tab Makes all NORMAL tokens in ~prog\par
+\tab\tab\tab\tab\tab\tab (a list) into local NORMAL \tab\tab\tab\tab\tab\tab\tab tokens, which cannot be matched\par
+\tab\tab\tab\tab\tab\tab by anything outside ~prog.\par
 \par
 BOOL\tab\tab\tab bool ~a\tab\tab Converts ~a to True or False,\par
 \tab\tab\tab\tab\tab\tab depending on its value.\par
 \par
+PR\tab\tab\tab pr ~a\tab\tab\tab Prints the value of ~a.\par
+\par
+UNW\tab\tab\tab unw ~a\tab\tab ~a must be a PAREN node. Gives\par
+\tab\tab\tab\tab\tab\tab the children of ~a as its \tab\tab\tab\tab\tab\tab\tab\tab product.\par
+\par
 IND\tab\tab\tab ind ~i ~l\tab\tab Gives the ~i`th value of ~l.\par
 \par
-PR\tab\tab\tab pr ~a\tab\tab\tab Prints the value of ~a.\par
+LEN\tab\tab\tab len ~l\tab\tab Gives the length of ~l.\par
 \par
 +, -, /,\tab\tab ~a op ~b\tab\tab Gives the value of the op\par
 *, %, **,\tab\tab\tab\tab\tab applied to ~a and ~b. ** is\par
@@ -150,7 +155,7 @@ Now let's use these macros to make some programs.\par
 where ~a and ~b will be assumed to be PAREN. We want the expression to evaluate to ~a if boolean-value is True and to ~b if it is False. The easiest (only?) way to do this is with two macros:\par
 \tab (cond ~a True ~b) -> (unw ~a)\par
 \tab (cond ~a False ~b) -> (unw ~b)\par
-This demonstrates the power of macros having forms instead of names. We can make a conditional without needing one to be built in. (N.B: In an earlier stage of the language, /\\ brackets would act like this, so ~a /boolean-value\\ ~b would be the conditional. I scrapped that idea as soon as I realized conditionals could be made with two macros. I also had <> act as brackets where the insides would have macros evaluated on them \i and\i0  interpreted. Those were unnecessary once I decided that \i all\i0  action would be done by evaluating macros. I also really needed /, < and > for math.)\par
+This demonstrates the power of macros having forms instead of names. We can make a conditional without needing one to be built in. (N.B: In an earlier stage of the language, /\\ brackets would act like this, so ~a /boolean-value\\ ~b would be the conditional. I scrapped that idea as soon as I realized conditionals could be made with two macros. I also had <> act as brackets where the insides would have macros evaluated on them \i and\i0  interpreted. Those were unnecessary once I decided that all action would be done by evaluating macros. I also really needed /, < and > for math.)\par
 \tab Now let's try to build a for loop. The form will look like this:\par
 \tab (~a ~n times)\par
 We will define it using recursion, but first, another bit of syntax: "|" cannot be evaluated by a macro, not even by a capture. It is useful for separating expressions. Here's the definition:\par
@@ -166,8 +171,7 @@ becomes\par
 becomes\par
 \tab True\par
 so the whole expression becomes\par
-
-\pard\tab cond ([unw (1)] | (1) [3 - 1] times) True ()\par
+\tab cond ([unw (1)] | (1) [3 - 1] times) True ()\par
 and then by the definition of cond, this turns into\par
 \tab [unw (1)] | (1) [3 - 1] times\par
 and then\par
@@ -197,8 +201,7 @@ Macros defined more recently are evaluated before ones defined earlier. This is 
 \par
 I'm sure you could get polymorphism.\par
 \tab\par
-
-\pard\par
+\par
 \par
 }
  
