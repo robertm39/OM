@@ -223,7 +223,7 @@ def get_print_macro():
     return Macro(form=form, name='pr', get_product=print_macro_get_product)
 #********************
 def ind_macro_get_product(mappings):
-    i = int(mappings['i'].val)
+    i = int(float(mappings['i'].val))
     l = mappings['l'].children
     return [l[i]]
 
