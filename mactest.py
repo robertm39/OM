@@ -13,6 +13,7 @@ s = om.Shell()
 boc.add_conds(s)
 boc.add_loops(s)
 boc.add_vars(s)
+boc.add_is(s)
 
 s.interpret('n -> 10')
 

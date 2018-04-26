@@ -250,6 +250,20 @@ def get_len_macro():
     form = [ParseNode(NodeType.NORMAL, val='len'), ParseNode(NodeType.CAPTURE, val='l')]
     return Macro(form=form, name='len', get_product=len_macro_get_product)
 #********************
+#def is_macro_get_product(mappings):
+#    a = mappings['a']
+#    b = mappings['b']
+#    
+#    if a == b:
+#        return [ParseNode(NodeType.NORMAL, val='True')]
+#    return [ParseNode(NodeType.NORMAL, val='False')]
+#
+#def get_is_macro():
+#    form = [ParseNode(NodeType.CAPTURE, val='a'),
+#            ParseNode(NodeType.NORMAL, val='is'),
+#            ParseNode(NodeType.CAPTURE, val='b')]
+#    return Macro(form=form, name='is', get_product=is_macro_get_product)
+#********************
 def get_builtin_macros(shell):
     return [get_defmac_macro(shell),
             get_loc_macro(shell),
@@ -258,6 +272,7 @@ def get_builtin_macros(shell):
             get_ind_macro(),
             get_unw_macro(),
             get_len_macro(),
+#            get_is_macro(),
             get_binary_macro('+', lambda a,b:float(a) + float(b)),
             get_binary_macro('-', lambda a,b:float(a) - float(b)),
             get_binary_macro('*', lambda a,b:float(a) * float(b)),
@@ -361,6 +376,10 @@ class Shell:
                 curr_token += char
                 escaping -= 1
             elif char in BRACKET_DICT:
+                ###Added
+                tokens.append(curr_token)
+                curr_token = ''
+                ###End Added
                 curr_token += char
                 next_bracket = self.matching_bracket_index(line, ind)
                 if next_bracket > ind: #We're at the beginning of a bracket
@@ -448,19 +467,21 @@ class Shell:
                     for i in range(0, len(nodes)): #going through nodes
                         matches, captures, length = macro.matches(nodes[i:])
                         if matches:
-                            going = True
-                            changed = True
                             product = macro.get_product(captures)
-                            if verbose:
-                                print('***** ' + macro.name + ' *****')
-                                print(nodes)
-                            nodes = nodes[0:i] + product + nodes[i+length:]
-                            if verbose:
-                                print('*****')
-                                print(nodes)
-                                print('*' * (12 + len(macro.name)))
-                                print('')
-                            break #Go back to the smallest macros
+                            if product != nodes[i:i+length]:#Only if changed
+                                going = True
+                                changed = True
+                                product = macro.get_product(captures)
+                                if verbose:
+                                    print('***** ' + macro.name + ' *****')
+                                    print(nodes)
+                                nodes = nodes[0:i] + product + nodes[i+length:]
+                                if verbose:
+                                    print('*****')
+                                    print(nodes)
+                                    print('*' * (12 + len(macro.name)))
+                                    print('')
+                                break #Go back to the smallest macros
                     if going:
                         break
                 

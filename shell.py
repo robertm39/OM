@@ -9,9 +9,7 @@ import om
 import base_om_code as boc
 
 s = om.Shell()
-boc.add_conds(s)
-boc.add_loops(s)
-boc.add_vars(s)
+boc.add_all(s)
 
 while True:
     line = input('LINE:')

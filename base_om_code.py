@@ -20,3 +20,13 @@ def add_vars(shell):
     
     shell.interpret('(set ~obj ~var ~val) -> ( (get ~obj ~var) -> (~val) (~obj has ~var) -> (True) )')
     shell.interpret('(del ~obj ~var) -> ( (get ~obj ~var) -> () (~obj has ~var) -> (False) )')
+    
+def add_is(shell):
+    shell.interpret('(~a is ~b) -> (False)')
+    shell.interpret('(~a is ~a) -> (True)')#Depends on precendence
+    
+def add_all(shell):
+    add_conds(shell)
+    add_loops(shell)
+    add_vars(shell)
+    add_is(shell)
