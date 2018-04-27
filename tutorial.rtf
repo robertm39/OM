@@ -127,6 +127,10 @@ Name\tab\tab\tab Form\tab\tab\tab Product\par
 DEFMAC\tab\tab ~a -> ~b\tab\tab Consumes the nodes it matches\par
 \tab\tab\tab    OR\tab\tab\tab and makes a macro from them.\par
 \tab\tab\tab (~a) -> (~b)\par
+DEF_CONDMAC\tab ~a -> ~b if ~c\tab Consumes the nodes it matches\par
+\tab\tab\tab\tab\tab\tab and makes a conditional macro\par
+\tab\tab\tab\tab\tab\tab from them. A conditional macro\par
+\tab\tab\tab\tab\tab\tab only does anything when \tab\tab\tab\tab\tab\tab\tab\tab evaluated if its condition is \tab\tab\tab\tab\tab\tab\tab True.\par
 \par
 LOC\tab\tab\tab loc ~name ~prog\tab Makes all NORMAL tokens in ~prog\par
 \tab\tab\tab\tab\tab\tab (a list) into local NORMAL \tab\tab\tab\tab\tab\tab\tab tokens, which cannot be matched\par
@@ -199,7 +203,7 @@ as we expected.\par
 \par
 Macros defined more recently are evaluated before ones defined earlier. This is useful for special cases, as above (Longer macros are also always evaluated before shorter ones).\par
 \par
-I'm sure you could get polymorphism.\par
+You get get polymorphism using conditional macros.\par
 \tab\par
 \par
 \par
