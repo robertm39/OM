@@ -186,7 +186,8 @@ def loc_macro_get_product(shell, mappings):
         for node in prog:
             if node.node_type is NodeType.NORMAL:
                 if node.val == name:
-                    node.id = node_id #Make into a local node
+                    if not hasattr(node, 'id'):
+                        node.id = node_id #Make into a local node
             if node.node_type in BRACKET_TYPES:
                 make_local(name, node_id, node.children)
     

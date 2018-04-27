@@ -5,6 +5,7 @@ Created on Wed Apr 18 18:47:08 2018
 @author: rober
 """
 
+import sys
 import om
 import base_om_code as boc
 
@@ -13,8 +14,7 @@ boc.add_all(s)
 
 while True:
     line = input('LINE:')
-#    print('interpreting: ' + line)
-#    print('')
-    s.interpret(line, do_print=True)
-    
-#(area ~a) -> ( cond ([get ~a width] * [get ~a height]) [[get ~a type] is Rect] (area ~a))
+    try:
+        s.interpret(line, verbose=False, do_print=True)
+    except:
+        print('ERROR: '  + str(sys.exc_info()[0]))

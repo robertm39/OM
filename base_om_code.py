@@ -10,9 +10,8 @@ def add_conds(shell):
     shell.interpret('(cond ~a False ~b) -> ([unw ~b])')
 
 def add_loops(shell):
-    shell.interpret('(~a while ~b) -> (cond ([unw ~a] | ~a while ~b) unw ([bool [unw ~b]]) () )')
-#    shell.interpret('(~a for ~o in ~l) -> (loc i ([i -> 0] [ ( [[~o -> [ind [i] ~l]] [unw ~a]] [i -> [[i] + 1]]) while ([i] < [len [~l]])] ))')
-    shell.interpret('(~a ~n times) -> ( cond ([unw ~a ] | ~a [[~n] - 1] times) [bool [[~n] > 0]] () )')
+    shell.interpret('(~a while ~b) -> (cond ([unw ~a] ~a while ~b) unw ([bool [unw ~b]]) () )')
+    shell.interpret('(~a ~n times) -> ( cond ([unw ~a ] ~a [[~n] - 1] times) [bool [[~n] > 0]] () )')
     
     shell.interpret('(~a FOR ~o IN ~l WITH ~i) -> ([~i -> 0] [ ( [[~o -> [ind [~i] ~l]] [unw ~a]] [~i -> [[~i] + 1]]) while ([~i] < [len [~l]])] )')
     shell.interpret('(~a for ~o in ~l) -> (~a FOR ~o IN ~l WITH [loc i (i)])') #This works, but for some time it didn't, and I have no idea why.
@@ -50,6 +49,8 @@ def add_lists(shell):
     shell.interpret('(slice ~i1 ~i2 ~l) -> (loc i ([i -> [~i1]] [([ind [i] ~l] [i -> [[i] + 1]]) while ([[i] < ~i2])]))')
     shell.interpret('(ind ~i ~l) -> (ind [[len ~l] + [~i]] ~l) if ([~i] < 0)')
     shell.interpret('(~l1 conc ~l2) -> ({[unw ~l1] [unw ~l2]})')
+    
+    shell.interpret('(~l backward) -> (loc i ([i -> [[len ~l] - 1]] [ ([ind [i] ~l] [i -> [[i] - 1]]]) while ([i] >= 0) ] ))')
 
 def add_all(shell):
     add_conds(shell)
