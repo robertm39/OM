@@ -32,12 +32,7 @@ curly = Bracket(NodeType.CURLY, '{}')
 BRACKETS = [paren, square, curly]
 
 def fill_in_form(form, mappings):
-#    print('fill_in_form running')
-#    print(form)
-#    print('')
     form = form[:]
-#    print(form)
-#    print('')
     
     i = 0
     for node in form:
@@ -45,28 +40,34 @@ def fill_in_form(form, mappings):
             name = node.val
             if name in mappings:
                 form[i] = mappings[name]
-        elif node.node_type in BRACKET_TYPES:#, NodeType.SLASH]:
+        elif node.node_type in BRACKET_TYPES:
             new_nodes = fill_in_form(node.children, mappings)
             form[i] = ParseNode(node.node_type, children=new_nodes)
-#            new_node = fill_in_form(node.children, mappings)
-#            form[i] = new_node
         i += 1
-#    print(form)
-#    print('***')
+        
     return form
 
+def handle_cond_macro(form, product_form, cond_form, mappings, shell):
+    cond_form = fill_in_form(cond_form, mappings)
+    cond, changed = shell.apply_macros(cond_form)
+    
+    if cond == [ParseNode(NodeType.NORMAL, val='True')]:
+        return fill_in_form(product_form, mappings)
+    else:
+        return fill_in_form(form, mappings)
+
 class Macro:
-    def __init__(self, form, get_product=None, product_form=None, name='unknown macro'):
+    def __init__(self, form, get_product=None, product_form=None, cond_form=None, shell=None, name='unknown macro'):
         self.form = form #An expression with only parens, captures, normals, literals and defs (literals not yet implemented)
         self.name=name
         
         if get_product != None:
             self.get_product = get_product
         elif product_form != None:
-#            print('Going by product_form')
-#            print(product_form)
-#            print('***')
-            self.get_product = lambda mappings: fill_in_form(product_form, mappings)
+            if cond_form != None:
+                self.get_product = lambda mappings: handle_cond_macro(form, product_form, cond_form, mappings, shell)
+            else:
+                self.get_product = lambda mappings: fill_in_form(product_form, mappings)
         else:
             raise AssertionError('No get_product or product_form')
     
@@ -147,10 +148,38 @@ def defmac_get_product(shell, mappings):
     return [] #Evaluates to nothing
 
 def get_defmac_macro(shell):
-    form = [ParseNode(NodeType.CAPTURE, val='FORM'), DEF_NODE, ParseNode(NodeType.CAPTURE, val='PRODUCT')]
+    form = [ParseNode(NodeType.CAPTURE, val='FORM'),
+            DEF_NODE,
+            ParseNode(NodeType.CAPTURE, val='PRODUCT')]
     return Macro(form=form,
                  name='DEFMAC',
                  get_product=lambda maps: defmac_get_product(shell, maps))
+#********************
+def def_condmac_get_product(shell, mappings):
+    form = mappings['FORM']
+    product_form = mappings['PRODUCT']
+    cond = mappings['COND']
+    
+    form = unpack_and_wrap_node(form)
+    product_form = unpack_and_wrap_node(product_form)
+    cond = unpack_and_wrap_node(cond)
+    
+    shell.register_macro(Macro(form,
+                               product_form=product_form,
+                               cond_form=cond,
+                               shell=shell))
+    
+    return [] #Evaluates to nothing
+    
+def get_def_condmac_macro(shell):
+    form = [ParseNode(NodeType.CAPTURE, val='FORM'),
+            DEF_NODE,
+            ParseNode(NodeType.CAPTURE, val='PRODUCT'),
+            ParseNode(NodeType.NORMAL, val='if'),
+            ParseNode(NodeType.CAPTURE, val='COND')]
+    return Macro(form=form,
+                 name='DEF_CONDMAC',
+                 get_product=lambda maps: def_condmac_get_product(shell, maps))
 #********************
 def loc_macro_get_product(shell, mappings):
     def make_local(name, node_id, prog): #Modifies the passed object
@@ -250,29 +279,15 @@ def get_len_macro():
     form = [ParseNode(NodeType.NORMAL, val='len'), ParseNode(NodeType.CAPTURE, val='l')]
     return Macro(form=form, name='len', get_product=len_macro_get_product)
 #********************
-#def is_macro_get_product(mappings):
-#    a = mappings['a']
-#    b = mappings['b']
-#    
-#    if a == b:
-#        return [ParseNode(NodeType.NORMAL, val='True')]
-#    return [ParseNode(NodeType.NORMAL, val='False')]
-#
-#def get_is_macro():
-#    form = [ParseNode(NodeType.CAPTURE, val='a'),
-#            ParseNode(NodeType.NORMAL, val='is'),
-#            ParseNode(NodeType.CAPTURE, val='b')]
-#    return Macro(form=form, name='is', get_product=is_macro_get_product)
-#********************
 def get_builtin_macros(shell):
     return [get_defmac_macro(shell),
+            get_def_condmac_macro(shell),
             get_loc_macro(shell),
             get_to_bool_macro(),
             get_print_macro(),
             get_ind_macro(),
             get_unw_macro(),
             get_len_macro(),
-#            get_is_macro(),
             get_binary_macro('+', lambda a,b:float(a) + float(b)),
             get_binary_macro('-', lambda a,b:float(a) - float(b)),
             get_binary_macro('*', lambda a,b:float(a) * float(b)),
@@ -408,7 +423,7 @@ class Shell:
                 
                 node = ParseNode(bracket.node_type, children=children)
                 return node
-        if token[0] == '~':# and token[-1] == '}': #Technically not a bracket
+        if token[0] == '~':
             text = token[1:]
             node = ParseNode(NodeType.CAPTURE, val=text)
             return node
