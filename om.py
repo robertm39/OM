@@ -279,6 +279,28 @@ def get_len_macro():
     form = [ParseNode(NodeType.NORMAL, val='len'), ParseNode(NodeType.CAPTURE, val='l')]
     return Macro(form=form, name='len', get_product=len_macro_get_product)
 #********************
+def expd_macro_get_product(mappings):
+    a = mappings['a']
+    result = []
+    for char in a:
+        result.append(ParseNode(NodeType.NORMAL, val=char))
+    return result
+
+def get_expd_macro():
+    form = [ParseNode(NodeType.NORMAL, val='expd'), ParseNode(NodeType.CAPTURE, val='a')]
+    return Macro(form=form, name='expd', get_product=expd_macro_get_product)
+#********************
+def wrap_macro_get_product(mappings):
+    l = mappings['l']
+    result = ''
+    for node in l:
+        result += node.val
+    return [ParseNode(NodeType.NORMAL, val=result)]
+
+def get_wrap_macro():
+    form = [ParseNode(NodeType.NORMAL, val='wrap'), ParseNode(NodeType.CAPTURE, val='l')]
+    return Macro(form=form, name='wrap', get_product=wrap_macro_get_product)
+#********************
 def get_builtin_macros(shell):
     return [get_defmac_macro(shell),
             get_def_condmac_macro(shell),
@@ -288,6 +310,8 @@ def get_builtin_macros(shell):
             get_ind_macro(),
             get_unw_macro(),
             get_len_macro(),
+            get_expd_macro(),
+            get_wrap_macro(),
             get_binary_macro('+', lambda a,b:float(a) + float(b)),
             get_binary_macro('-', lambda a,b:float(a) - float(b)),
             get_binary_macro('*', lambda a,b:float(a) * float(b)),
