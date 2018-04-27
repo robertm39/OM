@@ -282,7 +282,7 @@ def get_len_macro():
 def expd_macro_get_product(mappings):
     a = mappings['a']
     result = []
-    for char in a:
+    for char in a.val:
         result.append(ParseNode(NodeType.NORMAL, val=char))
     return result
 
@@ -293,7 +293,7 @@ def get_expd_macro():
 def wrap_macro_get_product(mappings):
     l = mappings['l']
     result = ''
-    for node in l:
+    for node in l.children:
         result += node.val
     return [ParseNode(NodeType.NORMAL, val=result)]
 
@@ -526,7 +526,7 @@ class Shell:
                 
         return nodes, changed
 
-    def interpret(self, line, verbose=False):
+    def interpret(self, line, verbose=False, do_print=False):
         tokens = self.tokenize(line)
         if verbose:
             print(tokens)
@@ -539,5 +539,6 @@ class Shell:
         
         if verbose:
             print('After macros:')
-            
-        print(nodes)
+        
+        if do_print:
+            print(nodes)

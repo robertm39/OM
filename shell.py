@@ -15,6 +15,6 @@ while True:
     line = input('LINE:')
 #    print('interpreting: ' + line)
 #    print('')
-    s.interpret(line)
+    s.interpret(line, do_print=True)
     
 #(area ~a) -> ( cond ([get ~a width] * [get ~a height]) [[get ~a type] is Rect] (area ~a))
