@@ -115,12 +115,14 @@ class Macro:
                                                             exact=True)
                 if not does_match:
                     return not_matches
-            elif to_match.node_type is NodeType.NORMAL:
-                if to_match != node:
-                    return not_matches
-            elif to_match.node_type is NodeType.DEF:
-                if not node.node_type is NodeType.DEF:
-                    return not_matches
+            elif to_match != node:
+                return not_matches
+#            elif to_match.node_type is NodeType.NORMAL:
+#                if to_match != node:
+#                    return not_matches
+#            elif to_match.node_type is NodeType.DEF:
+#                if not node.node_type is NodeType.DEF:
+#                    return not_matches
             i += 1
             if i >= len(form):
                 break #We've gone past the form
