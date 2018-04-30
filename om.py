@@ -60,11 +60,12 @@ class Macro:
     def __init__(self, form, get_product=None, product_form=None, cond_form=None, shell=None, name='unknown macro'):
         self.form = form
         self.name=name
-        
+        self.is_cond = False
         if get_product != None:
             self.get_product = get_product
         elif product_form != None:
             if cond_form != None:
+                self.is_cond = True
                 self.get_product = lambda mappings: handle_cond_macro(form,
                                                                       product_form,
                                                                       cond_form,
@@ -91,38 +92,32 @@ class Macro:
         
         #For an exact match, the expr and the form must be the same length
         if exact and len(expr) > len(form):
-            print('EXACT FAIL')
+#            print('EXACT FAIL')
             return not_matches
         
         for node in expr:
             if node.val == '|': #blocks macro comprehension
                 return not_matches
             
-            to_match = form[i]
+            f_node = form[i]
             
-            if to_match.node_type is NodeType.CAPTURE: #Capture nodes
-                name = to_match.val
+            if f_node.node_type is NodeType.CAPTURE: #Capture nodes
+                name = f_node.val
                 if name in mappings: #See whether the node matches the captured node
                     captured_node = mappings[name]
                     if node != captured_node:
                         return not_matches
                 else: #Capture this node
                     mappings[name] = node
-            elif to_match.node_type is NodeType.PAREN: #A list
+            elif f_node.node_type is NodeType.PAREN: #A list
                 does_match, mappings, length = self.matches(node.children,
-                                                            form=to_match.children,
+                                                            form=f_node.children,
                                                             mappings=mappings,
                                                             exact=True)
                 if not does_match:
                     return not_matches
-            elif to_match != node:
+            elif f_node != node:
                 return not_matches
-#            elif to_match.node_type is NodeType.NORMAL:
-#                if to_match != node:
-#                    return not_matches
-#            elif to_match.node_type is NodeType.DEF:
-#                if not node.node_type is NodeType.DEF:
-#                    return not_matches
             i += 1
             if i >= len(form):
                 break #We've gone past the form
@@ -482,12 +477,27 @@ class Shell:
         if token == '->':
             return DEF_NODE
         return ParseNode(NodeType.NORMAL, val=token.replace('`', ''))
-
+    
+    def trim_macros(self, newest):
+        if not newest.is_cond:
+            length = len(newest.form)
+            l_macros = [m for m in self.macros if len(m.form) == length]
+            l_macros.remove(newest)
+            for macro in l_macros:
+                #newest would match anything macro would
+                if newest.matches(macro.form)[0]:
+#                    print('TRIM')
+#                    print(macro)
+#                    print(newest)
+#                    print('****')
+                    self.macros.remove(macro)
+    
     def register_macro(self, macro):
         self.macros.append(macro)
         macro.time_added = self.macros_added
         self.macros_added += 1
         
+        self.trim_macros(macro)
         self.sort_macros()
 
     def sort_macros(self):
