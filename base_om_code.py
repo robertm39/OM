@@ -31,14 +31,17 @@ def add_is(shell):
 def add_bool(shell):
     shell.interpret('(not True) -> (False)')
     shell.interpret('(not False) -> (True)')
+    
     shell.interpret('(False and False) -> (False)')
     shell.interpret('(False and True) -> (False)')
     shell.interpret('(True and False) -> (False)')
     shell.interpret('(True and True) -> (True)')
+    
     shell.interpret('(False or False) -> (False)')
     shell.interpret('(False or True) -> (True)')
     shell.interpret('(True or False) -> (True)')
     shell.interpret('(True or True) -> (True)')
+    
     shell.interpret('(False xor False) -> (False)')
     shell.interpret('(False xor True) -> (True)')
     shell.interpret('(True xor False) -> (True)')
@@ -50,7 +53,15 @@ def add_lists(shell):
     shell.interpret('(ind ~i ~l) -> (ind [[len ~l] + [~i]] ~l) if ([~i] < 0)')
     shell.interpret('(~l1 conc ~l2) -> ({[unw ~l1] [unw ~l2]})')
     
-    shell.interpret('(~l backward) -> (loc i ([i -> [[len ~l] - 1]] [ ([ind [i] ~l] [i -> [[i] - 1]]]) while ([i] >= 0) ] ))')
+    shell.interpret('(~l backward) -> (loc i ([i -> [[len ~l] - 1]] [ ([ind [i] ~l] [i -> [[i] - 1]]) while ([i] >= 0) ] ))')
+
+def add_string_parse(shell):
+    shell.interpret('LB -> `[ ')
+    shell.interpret('RB -> `] ')
+    
+    shell.interpret('(match-rb ~ind ~l) -> (ind -1 {loc num (loc i (loc char ([num -> 1] [i -> [~ind]] [ ([i -> [[i] + 1]] [char -> [ind [i] ~l]] [cond (num -> [[num] + 1]) [[char] is [LB] ] () ] [cond (num -> [[num] - 1]) [[char] is [RB] ] ()]) while ([num != 0]) ] [i] ) ) ) } )')
+    shell.interpret('(match-lb ~ind ~l) -> (ind -1 {loc num (loc i (loc char ([num -> -1] [i -> [~ind]] [ ([i -> [[i] - 1]] [char -> [ind [i] ~l]] [cond (num -> [[num] + 1]) [[char] is [LB] ] () ] [cond (num -> [[num] - 1]) [[char] is [RB] ] ()]) while ([num != 0]) ] [i] ) ) ) } )')
+    shell.interpret('(match-b ~ind ~l) -> (cond (match-rb ~ind ~l) [[ind ~ind ~l] is [LB]] (match-lb ~ind ~l))')
 
 def add_all(shell):
     add_conds(shell)
@@ -59,3 +70,4 @@ def add_all(shell):
     add_is(shell)
     add_bool(shell)
     add_lists(shell)
+    add_string_parse(shell)

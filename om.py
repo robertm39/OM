@@ -58,14 +58,18 @@ def handle_cond_macro(form, product_form, cond_form, mappings, shell):
 
 class Macro:
     def __init__(self, form, get_product=None, product_form=None, cond_form=None, shell=None, name='unknown macro'):
-        self.form = form #An expression with only parens, captures, normals, literals and defs (literals not yet implemented)
+        self.form = form
         self.name=name
         
         if get_product != None:
             self.get_product = get_product
         elif product_form != None:
             if cond_form != None:
-                self.get_product = lambda mappings: handle_cond_macro(form, product_form, cond_form, mappings, shell)
+                self.get_product = lambda mappings: handle_cond_macro(form,
+                                                                      product_form,
+                                                                      cond_form,
+                                                                      mappings,
+                                                                      shell)
             else:
                 self.get_product = lambda mappings: fill_in_form(product_form, mappings)
         else:
@@ -74,18 +78,13 @@ class Macro:
     def __str__(self):
         return self.name
     
-    def matches(self, expr, form=None, mappings=None, exact=False):#Whether this macro matches the given expression, starting at the left
-#        print('matches running')
-        
+    #Whether this macro matches the given expression, starting at the left
+    def matches(self, expr, form=None, mappings=None, exact=False):
         form = self.form if form == None else form
         mappings = {} if mappings == None else mappings #Captured values: name -> node
         i = 0
         
         not_matches = False, {}, 0
-        
-#        print('expr:')
-#        print(expr)
-#        print('***')
         
         if len(expr) < len(form):
             return not_matches
@@ -95,15 +94,11 @@ class Macro:
             print('EXACT FAIL')
             return not_matches
         
-#        print('Checking nodes')
         for node in expr:
             if node.val == '|': #blocks macro comprehension
                 return not_matches
             
             to_match = form[i]
-#            print(node)
-#            print(to_match)
-#            print('***')
             
             if to_match.node_type is NodeType.CAPTURE: #Capture nodes
                 name = to_match.val
@@ -114,7 +109,10 @@ class Macro:
                 else: #Capture this node
                     mappings[name] = node
             elif to_match.node_type is NodeType.PAREN: #A list
-                does_match, mappings, length = self.matches(node.children, form=to_match.children, mappings=mappings, exact=True)
+                does_match, mappings, length = self.matches(node.children,
+                                                            form=to_match.children,
+                                                            mappings=mappings,
+                                                            exact=True)
                 if not does_match:
                     return not_matches
             elif to_match.node_type is NodeType.NORMAL:
@@ -182,19 +180,21 @@ def get_def_condmac_macro(shell):
                  get_product=lambda maps: def_condmac_get_product(shell, maps))
 #********************
 def loc_macro_get_product(shell, mappings):
-    def make_local(name, node_id, prog): #Modifies the passed object
-        for node in prog:
-            if node.node_type is NodeType.NORMAL:
-                if node.val == name:
-                    if not hasattr(node, 'id'):
-                        node.id = node_id #Make into a local node
-            if node.node_type in BRACKET_TYPES:
-                make_local(name, node_id, node.children)
+    def make_local(names, node_id, prog): #Modifies the passed object
+        for name in names:
+            for node in prog:
+                if node.node_type is NodeType.NORMAL:
+                    if node.val == name:
+                        if not hasattr(node, 'id'):
+                            node.id = node_id #Make into a local node
+                if node.node_type in BRACKET_TYPES:
+                    make_local(name, node_id, node.children)
     
     node_id = shell.take_id()
-    name = mappings['name'].val
+    names = unpack_and_wrap_node(mappings['name'])
+    names = [node.val for node in names]
     prog = mappings['prog'].children
-    make_local(name, node_id, prog)
+    make_local(names, node_id, prog)
     return prog
 
 def get_loc_macro(shell):
@@ -285,7 +285,7 @@ def expd_macro_get_product(mappings):
     result = []
     for char in a.val:
         result.append(ParseNode(NodeType.NORMAL, val=char))
-    return result
+    return [ParseNode(NodeType.PAREN, children=result)]
 
 def get_expd_macro():
     form = [ParseNode(NodeType.NORMAL, val='expd'), ParseNode(NodeType.CAPTURE, val='a')]
@@ -302,6 +302,32 @@ def get_wrap_macro():
     form = [ParseNode(NodeType.NORMAL, val='wrap'), ParseNode(NodeType.CAPTURE, val='l')]
     return Macro(form=form, name='wrap', get_product=wrap_macro_get_product)
 #********************
+def inp_macro_get_product(mappings):
+    val = input('IN:')
+    return [ParseNode(NodeType.NORMAL, val=val)]
+
+def get_inp_macro():
+    form = [ParseNode(NodeType.NORMAL, val='inp')]
+    return Macro(form=form, name='inp', get_product=inp_macro_get_product)
+#********************
+def char_macro_get_product(mappings):
+    a = mappings['a']
+    val = chr(int(float(a.val)))
+    return [ParseNode(NodeType.NORMAL, val=val)]
+
+def get_char_macro():
+    form = [ParseNode(NodeType.NORMAL, val='char'), ParseNode(NodeType.CAPTURE, val='a')]
+    return Macro(form=form, name='char', get_product=char_macro_get_product)
+#********************
+def ord_macro_get_product(mappings):
+    a = mappings['a']
+    val = ord(a.val[0])
+    return [ParseNode(NodeType.NORMAL, val=val)]
+
+def get_ord_macro():
+    form = [ParseNode(NodeType.NORMAL, val='ord'), ParseNode(NodeType.CAPTURE, val='a')]
+    return Macro(form=form, name='ord', get_product=ord_macro_get_product)
+#********************
 def get_builtin_macros(shell):
     return [get_defmac_macro(shell),
             get_def_condmac_macro(shell),
@@ -313,6 +339,9 @@ def get_builtin_macros(shell):
             get_len_macro(),
             get_expd_macro(),
             get_wrap_macro(),
+            get_inp_macro(),
+            get_char_macro(),
+            get_ord_macro(),
             get_binary_macro('+', lambda a,b:float(a) + float(b)),
             get_binary_macro('-', lambda a,b:float(a) - float(b)),
             get_binary_macro('*', lambda a,b:float(a) * float(b)),
@@ -367,14 +396,11 @@ DEF_NODE = ParseNode(NodeType.DEF)
 
 class Shell:
     def __init__(self):
-#        self.macros = get_builtin_macros(self)
         self.macros = []
         self.current_id = 0
         self.macros_added = 0 #For tracking which macros are older
         for macro in get_builtin_macros(self):
             self.register_macro(macro)
-        
-#        print(self.macros)
 
     def take_id(self):
         result = self.current_id
@@ -400,7 +426,6 @@ class Shell:
                 elif char == bracket_type[1]:
                     num -= direction
         if num != 0:
-#            print(line, ' ', line[ind], ind, num)
             raise AssertionError
         return ind
 
@@ -511,7 +536,6 @@ class Shell:
                             if product != nodes[i:i+length]:#Only if changed
                                 going = True
                                 changed = True
-                                product = macro.get_product(captures)
                                 if verbose:
                                     print('***** ' + macro.name + ' *****')
                                     print(nodes)
@@ -527,7 +551,7 @@ class Shell:
                 
         return nodes, changed
 
-    def interpret(self, line, verbose=False, do_print=False):
+    def interpret(self, line, verbose=False, do_print=False, return_nodes=False):
         tokens = self.tokenize(line)
         if verbose:
             print(tokens)
@@ -543,3 +567,6 @@ class Shell:
         
         if do_print:
             print(nodes)
+            
+        if return_nodes:
+            return nodes
