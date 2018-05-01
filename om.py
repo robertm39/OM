@@ -60,12 +60,13 @@ class Macro:
     def __init__(self, form, get_product=None, product_form=None, cond_form=None, shell=None, name='unknown macro'):
         self.form = form
         self.name=name
-        self.is_cond = False
+        self.is_cond = cond_form != None
+#        if self.is_cond:
+#            print('COND')
         if get_product != None:
             self.get_product = get_product
         elif product_form != None:
             if cond_form != None:
-                self.is_cond = True
                 self.get_product = lambda mappings: handle_cond_macro(form,
                                                                       product_form,
                                                                       cond_form,
@@ -388,12 +389,22 @@ class ParseNode:
     
     def __ne__(self, other):
         return not self == other
+    
+    def __hash__(self):
+        result = 17
+        result += hash(self.val)
+        result *= 31
+        result += hash(self.id) if hasattr(self, 'id') else 0
+        result *= 31
+        return result
         
 DEF_NODE = ParseNode(NodeType.DEF)
 
 class Shell:
     def __init__(self):
         self.macros = []
+        self.free_macros = {}
+        self.bound_macros = {}
         self.current_id = 0
         self.macros_added = 0 #For tracking which macros are older
         for macro in get_builtin_macros(self):
@@ -486,25 +497,78 @@ class Shell:
             for macro in l_macros:
                 #newest would match anything macro would
                 if newest.matches(macro.form)[0]:
-#                    print('TRIM')
-#                    print(macro)
-#                    print(newest)
-#                    print('****')
                     self.macros.remove(macro)
+    
+    def update_bound_and_free(self, macro):
+#        print('update_bound_and_free')
+#        print(macro.form)
+#        print('')
+        for i in range(0, len(macro.form)):
+            node = macro.form[i]
+            #I don't want to recursively deal with brackets right now, this'll do
+            if node.node_type is NodeType.CAPTURE or node.node_type in BRACKET_TYPES:
+#                print(str(i) + ': free')
+                if not i in self.free_macros:
+                    self.free_macros[i] = [macro]
+                else:
+                    self.free_macros[i].append(macro)
+            else:
+#                print(str(i) + ': bound with ' + str(node))
+                self.bound_macros[(i, node)] = self.bound_macros.get((i, node), []) + [macro]
+#        print('**********************')
     
     def register_macro(self, macro):
         self.macros.append(macro)
         macro.time_added = self.macros_added
         self.macros_added += 1
         
+        self.update_bound_and_free(macro)
         self.trim_macros(macro)
         self.sort_macros()
 
-    def sort_macros(self):
-        self.macros.sort(key=lambda m:-m.time_added) #Ascending by age - secondary
-        self.macros.sort(key=lambda m:-len(m.form)) #Descending by length - primary
+    def sort_macros(self, macros=None):
+        if macros==None:
+            macros = self.macros
+        
+        macros.sort(key=lambda m:-m.time_added) #Ascending by age - secondary
+        macros.sort(key=lambda m:-len(m.form)) #Descending by length - primary
 
-    def apply_macros(self, nodes, verbose=False): #Takes and returns a list of nodes
+    def winnow_macros(self, macros, nodes): #Returns unsorted
+#        return macros
+#        print('winnow_macros **********************')
+#        poss_macros = macros[:]
+#        print(nodes)
+#        print('***')
+        poss_macros = [m for m in macros if len(m.form) <= len(nodes)]
+        
+        max_len = max([len(m.form) for m in poss_macros])
+#        print([str(m) for m in poss_macros])
+        sure = []
+        for i in range(0, len(nodes)):
+            #Macros that are completely matched
+            done = [m for m in poss_macros if len(m.form) < i + 1]
+            sure.extend(done)
+            poss_macros = [m for m in poss_macros if not m in done]
+            
+            if i + 1 > max_len:
+                return poss_macros + sure
+#            print(str(i) + ':')
+            free = self.free_macros[i]
+#            print([str(m) for m in free])
+#            print('val: ' + nodes[i].val)
+            matching = self.bound_macros.get((i, nodes[i]), [])
+#            print([str(m) for m in matching])
+            poss_macros = [m for m in poss_macros if m in free or m in matching]  
+#            print([str(m) for m in poss_macros])
+#            print('')
+            
+            if not poss_macros:
+                return sure
+            max_len = max([len(m.form) for m in poss_macros])
+#        print('************************************')
+        return sure + poss_macros
+
+    def apply_macros(self, nodes, verbose=False, level=0): #Takes and returns a list of nodes
         self.sort_macros()
         
         nodes = nodes[:] #Copy to get rid of side effects
@@ -528,7 +592,11 @@ class Shell:
                     going = True
                     
                     insides = node.children
-                    interpreted, changed = self.apply_macros(insides)
+#                    print('Level ' + str(level))
+#                    print(insides)
+#                    print('*****')
+                    interpreted, changed = self.apply_macros(insides, level=level+1)
+#                    print('******************')
                     if node.node_type is NodeType.SQUARE:
                         nodes = nodes[0:i] + list(interpreted) + nodes[i+1:] #Put the result in without brackets
                     elif node.node_type is NodeType.CURLY:
@@ -540,9 +608,18 @@ class Shell:
             #Only paren
             #So now we can apply macros
             if not going:
-                for macro in self.macros: #Now the macros will be gone through in order
-                    for i in range(0, len(nodes)): #going through nodes
-                        matches, captures, length = macro.matches(nodes[i:])
+                
+                for i in range(0, len(nodes)):
+                    
+                    c_nodes = nodes[i:]
+                    poss_macros = self.winnow_macros(self.macros, c_nodes)
+#                    poss_macros = self.macros
+                    self.sort_macros(macros=poss_macros)
+                    
+#                    print('possible: ' + str(len(poss_macros)))
+                    
+                    for macro in poss_macros:
+                        matches, captures, length = macro.matches(c_nodes)
                         if matches:
                             product = macro.get_product(captures)
                             if product != nodes[i:i+length]:#Only if changed
@@ -557,9 +634,31 @@ class Shell:
                                     print(nodes)
                                     print('*' * (12 + len(macro.name)))
                                     print('')
-                                break #Go back to the smallest macros
+                                break #Go back to brackets
+                                
                     if going:
                         break
+                
+#                for macro in self.macros: #Now the macros will be gone through in order
+#                    for i in range(0, len(nodes)): #going through nodes
+#                        matches, captures, length = macro.matches(nodes[i:])
+#                        if matches:
+#                            product = macro.get_product(captures)
+#                            if product != nodes[i:i+length]:#Only if changed
+#                                going = True
+#                                changed = True
+#                                if verbose:
+#                                    print('***** ' + macro.name + ' *****')
+#                                    print(nodes)
+#                                nodes = nodes[0:i] + product + nodes[i+length:]
+#                                if verbose:
+#                                    print('*****')
+#                                    print(nodes)
+#                                    print('*' * (12 + len(macro.name)))
+#                                    print('')
+#                                break #Go back to brackets
+#                    if going:
+#                        break
                 
         return nodes, changed
 

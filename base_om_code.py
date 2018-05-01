@@ -6,8 +6,8 @@ Created on Thu Apr 26 18:11:50 2018
 """
 
 def add_conds(shell):
-    shell.interpret('(cond ~a True ~b) -> ([unw ~a])')
-    shell.interpret('(cond ~a False ~b) -> ([unw ~b])')
+    shell.interpret('(cond ~a True ~b) -> (unw ~a)')
+    shell.interpret('(cond ~a False ~b) -> (unw ~b)')
 
 def add_loops(shell):
     shell.interpret('(~a while ~b) -> (cond ([unw ~a] ~a while ~b) unw ([bool [unw ~b]]) () )')
