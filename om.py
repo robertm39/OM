@@ -500,22 +500,16 @@ class Shell:
                     self.macros.remove(macro)
     
     def update_bound_and_free(self, macro):
-#        print('update_bound_and_free')
-#        print(macro.form)
-#        print('')
         for i in range(0, len(macro.form)):
             node = macro.form[i]
             #I don't want to recursively deal with brackets right now, this'll do
             if node.node_type is NodeType.CAPTURE or node.node_type in BRACKET_TYPES:
-#                print(str(i) + ': free')
                 if not i in self.free_macros:
                     self.free_macros[i] = [macro]
                 else:
                     self.free_macros[i].append(macro)
             else:
-#                print(str(i) + ': bound with ' + str(node))
                 self.bound_macros[(i, node)] = self.bound_macros.get((i, node), []) + [macro]
-#        print('**********************')
     
     def register_macro(self, macro):
         self.macros.append(macro)
@@ -534,15 +528,9 @@ class Shell:
         macros.sort(key=lambda m:-len(m.form)) #Descending by length - primary
 
     def winnow_macros(self, macros, nodes): #Returns unsorted
-#        return macros
-#        print('winnow_macros **********************')
-#        poss_macros = macros[:]
-#        print(nodes)
-#        print('***')
         poss_macros = [m for m in macros if len(m.form) <= len(nodes)]
         
         max_len = max([len(m.form) for m in poss_macros])
-#        print([str(m) for m in poss_macros])
         sure = []
         for i in range(0, len(nodes)):
             #Macros that are completely matched
@@ -552,20 +540,13 @@ class Shell:
             
             if i + 1 > max_len:
                 return poss_macros + sure
-#            print(str(i) + ':')
-            free = self.free_macros[i]
-#            print([str(m) for m in free])
-#            print('val: ' + nodes[i].val)
+            free = self.free_macros.get(i, [])
             matching = self.bound_macros.get((i, nodes[i]), [])
-#            print([str(m) for m in matching])
-            poss_macros = [m for m in poss_macros if m in free or m in matching]  
-#            print([str(m) for m in poss_macros])
-#            print('')
+            poss_macros = [m for m in poss_macros if m in free or m in matching]
             
             if not poss_macros:
                 return sure
             max_len = max([len(m.form) for m in poss_macros])
-#        print('************************************')
         return sure + poss_macros
 
     def apply_macros(self, nodes, verbose=False, level=0): #Takes and returns a list of nodes
@@ -592,11 +573,7 @@ class Shell:
                     going = True
                     
                     insides = node.children
-#                    print('Level ' + str(level))
-#                    print(insides)
-#                    print('*****')
                     interpreted, changed = self.apply_macros(insides, level=level+1)
-#                    print('******************')
                     if node.node_type is NodeType.SQUARE:
                         nodes = nodes[0:i] + list(interpreted) + nodes[i+1:] #Put the result in without brackets
                     elif node.node_type is NodeType.CURLY:
@@ -613,10 +590,7 @@ class Shell:
                     
                     c_nodes = nodes[i:]
                     poss_macros = self.winnow_macros(self.macros, c_nodes)
-#                    poss_macros = self.macros
                     self.sort_macros(macros=poss_macros)
-                    
-#                    print('possible: ' + str(len(poss_macros)))
                     
                     for macro in poss_macros:
                         matches, captures, length = macro.matches(c_nodes)

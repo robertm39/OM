@@ -35,10 +35,12 @@ def run_om_project(folder, shell):
     for (dirpath, dirnames, filenames) in os.walk(folder):
 #        print(filenames)
         for file in filenames:
-            paths_from_names[file] = dirpath + '\\' + file
+#            paths_from_names[file] = dirpath + '\\' + file
+            paths_from_names[file] = os.path.join(dirpath, file)
         paths = [paths_from_names[f] for f in filenames]
         if 'main.om' in filenames:
-            main = dirpath + '\\main.om'
+#            main = dirpath + '\\main.om'
+            main = os.path.join(dirpath, 'main.om')
         files.extend(paths)
     
     #Only keep .om files

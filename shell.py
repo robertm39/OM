@@ -5,7 +5,6 @@ Created on Wed Apr 18 18:47:08 2018
 @author: rober
 """
 
-#import sys
 import om
 import base_om_code as boc
 import bf_om
