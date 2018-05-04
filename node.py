@@ -12,7 +12,7 @@ class NodeType(Enum):
     SQUARE = 'SQUARE'   #[]
     CURLY = 'CURLY'     #{}
     CAPTURE = 'CAPTURE' #~word
-    DEF = 'DEF'         #->
+#    DEF = 'DEF'         #->
     NORMAL = 'NORMAL'   #word
     
 class Node:
@@ -60,4 +60,5 @@ class Node:
         result *= 31
         return result
         
-DEF_NODE = Node(NodeType.DEF)
+#DEF_NODE = Node(NodeType.DEF)
+DEF_NODE = Node(NodeType.NORMAL, val='->')

@@ -112,7 +112,7 @@ class Shell:
             text = token[1:]
             node = Node(NodeType.CAPTURE, val=text)
             return node
-        if token == '->':
+        if token == DEF_NODE.val:
             return DEF_NODE
         return Node(NodeType.NORMAL, val=token.replace('`', ''))
     

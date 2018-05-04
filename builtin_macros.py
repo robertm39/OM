@@ -239,5 +239,7 @@ def get_builtin_macros(shell):
             get_binary_macro('>', lambda a,b:float(a) > float(b)),
             get_binary_macro('<', lambda a,b:float(a) < float(b)),
             get_binary_macro('>=', lambda a,b:float(a) >= float(b)),
-            get_binary_macro('<=', lambda a,b:float(a) <= float(b))]
+            get_binary_macro('<=', lambda a,b:float(a) <= float(b)),
+            get_binary_macro('f-eq', lambda a,b:float(a) == float(b)),
+            get_binary_macro('f-neq', lambda a,b:float(a) != float(b))]
 ###End Built-in macros
