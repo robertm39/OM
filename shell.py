@@ -15,7 +15,4 @@ bf_om.add_bf(s)
 
 while True:
     line = input('LINE:')
-#    try:
     s.interpret(line, verbose=False, do_print=True)
-#    except:
-#        print('ERROR: '  + str(sys.exc_info()))
