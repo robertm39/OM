@@ -22,7 +22,7 @@ def defmac_get_product(shell, mappings):
     product_form = unpack_and_wrap_node(product_form)
     
     shell.register_macro(Macro(form, product_form=product_form))
-    shell.sort_macros() #Should add method to Shell for adding and sorting together
+#    shell.sort_macros() #Should add method to Shell for adding and sorting together
     return [] #Evaluates to nothing
 
 def get_defmac_macro(shell):

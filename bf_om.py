@@ -25,6 +25,7 @@ def add_bf(shell):
     shell.interpret('(L-LP) -> (cond (PROG-I -> [match-rb [PROG-I] [prog]]) [[get tape [ptr]] is 0.0] ())')
     shell.interpret('(R-LP) -> (cond (PROG-I -> [match-lb [PROG-I] [prog]]) [not [[get tape [ptr]] is 0.0]] ())')
     
+    shell.interpret('(DO-BF ~a) -> ()') #Get rid of comments
     shell.interpret('(DO-BF (>) ) -> (PTR-R)')
     shell.interpret('(DO-BF (<) ) -> (PTR-L)')
     shell.interpret('(DO-BF (+) ) -> (INC)')

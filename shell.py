@@ -13,6 +13,8 @@ s = om.Shell()
 boc.add_all(s)
 bf_om.add_bf(s)
 
-while True:
-    line = input('LINE:')
-    s.interpret(line, verbose=False, do_print=True)
+s.interpret('run-bf (+ + + + + + + + + + `[ > + + + + + + + + + + < - `] > `[ > . + < - `])')
+#s.interpret('rbf')
+#while True:
+#    line = input('LINE:')
+#    s.interpret(line, verbose=False, do_print=True)

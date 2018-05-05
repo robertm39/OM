@@ -30,6 +30,8 @@ BRACKETS = [paren, square, curly]
 class Shell:
     def __init__(self):
         self.macros = []
+#        self.macros_by_len = [] #A list of lists
+        self.max_len = 0
         self.free_macros = {}
         self.bound_macros = {}
         self.current_id = 0
@@ -138,6 +140,13 @@ class Shell:
             else:
                 self.bound_macros[(i, node)] = self.bound_macros.get((i, node), []) + [macro]
     
+    def update_max_len(self, macro):
+#        mln = macro.ln
+#        for i in range(self.max_len - 1, mln):
+#            self.macros_by_len.append([])
+#        self.macros_by_len[mln - 1].append(macro)
+        self.max_len = max(self.max_len, macro.ln)
+    
     def register_macro(self, macro):
         self.macros.append(macro)
         macro.time_added = self.macros_added
@@ -145,39 +154,78 @@ class Shell:
         
         self.update_bound_and_free(macro)
         self.trim_macros(macro)
-        self.sort_macros()
+        self.update_max_len(macro)
+#        self.sort_macros()
 
     def sort_macros(self, macros=None):
         if macros==None:
             macros = self.macros
         
-        macros.sort(key=lambda m:-m.time_added) #Ascending by age - secondary
-        macros.sort(key=lambda m:-len(m.form)) #Descending by length - primary
+        if len(macros) == 2:
+            if macros[1] < macros[0]:
+                temp = macros[0]
+                macros[0] = macros[1]
+                macros[1] = temp
+        else:
+            macros.sort(key=lambda m:-m.time_added) #Ascending by age - secondary
+            macros.sort(key=lambda m:-m.ln) #Descending by length - primary
 
     def winnow_macros(self, macros, nodes): #Returns unsorted
-        poss_macros = [m for m in macros if len(m.form) <= len(nodes)]
+#        poss_macros = [m for m in macros if len(m.form) <= len(nodes)]
+#        max_len = max([len(m.form) for m in poss_macros])
         
-        max_len = max([len(m.form) for m in poss_macros])
+        n_len = len(nodes)
+        if n_len < self.max_len:
+#            poss_macros = []
+#            for i in range(0, n_len):
+#                l = self.macros_by_len[i]
+#                poss_macros.extend(l)
+#            [poss_macros.extend(self.macros_by_len[i]) for i  in range(0, n_len)]
+            poss_macros = [m for m in macros if m.ln <= n_len]
+            max_len = min(n_len, self.max_len)
+        else:
+            poss_macros = macros
+            max_len = self.max_len
+        
+        result = None
+        
         sure = []
-        for i in range(0, len(nodes)):
+        for i in range(0, n_len):
             #Macros that are completely matched
-            done = [m for m in poss_macros if len(m.form) < i + 1]
+            done = [m for m in poss_macros if m.ln < i + 1]
             sure.extend(done)
             poss_macros = [m for m in poss_macros if not m in done]
             
             if i + 1 > max_len:
-                return poss_macros + sure
+                result = sure + poss_macros
+                break
+#                return poss_macros + sure
             free = self.free_macros.get(i, [])
             matching = self.bound_macros.get((i, nodes[i]), [])
-            poss_macros = [m for m in poss_macros if m in free or m in matching]
+            left = set(free) | set(matching)
+            poss_macros = list(set(poss_macros) & left)
+#            poss_macros = [m for m in poss_macros if m in free or m in matching]
             
             if not poss_macros:
-                return sure
-            max_len = max([len(m.form) for m in poss_macros])
-        return sure + poss_macros
+                result = sure
+                break
+#                return sure
+#            max_len = max([len(m.form) for m in poss_macros])
+            max_len = max([m.ln for m in poss_macros])
+            
+        if not result:
+            result = sure + poss_macros
+        
+        if len(result) >= 50:
+            print(str(len(result)) + ' macros')
+            print('nodes:')
+            print(nodes)
+            print('******')
+        
+        return result
 
     def apply_macros(self, nodes, verbose=False, level=0): #Takes and returns a list of nodes
-        self.sort_macros()
+#        self.sort_macros()
         
         nodes = nodes[:] #Copy to get rid of side effects
         
@@ -217,7 +265,8 @@ class Shell:
                     
                     c_nodes = nodes[i:]
                     poss_macros = self.winnow_macros(self.macros, c_nodes)
-                    self.sort_macros(macros=poss_macros)
+                    if len(poss_macros) > 1:
+                        self.sort_macros(macros=poss_macros)
                     
                     for macro in poss_macros:
                         matches, captures, length = macro.matches(c_nodes)

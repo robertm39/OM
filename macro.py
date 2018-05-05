@@ -19,8 +19,15 @@ def handle_cond_macro(form, product_form, cond_form, mappings, shell):
         return fill_in_form(form, mappings)
 
 class Macro:
-    def __init__(self, form, get_product=None, product_form=None, cond_form=None, shell=None, name='unknown macro'):
+    def __init__(self,
+                 form,
+                 get_product=None,
+                 product_form=None,
+                 cond_form=None,
+                 shell=None,
+                 name='unknown macro'):
         self.form = form
+        self.ln = len(form)
         self.name=name
         self.is_cond = cond_form != None
         
@@ -40,6 +47,13 @@ class Macro:
     
     def __str__(self):
         return self.name
+    
+    def __lt__(self, other): #Less than -> runs earlier
+        if self.ln > other.ln:
+            return True
+        if self.time_added > other.time_added:
+            return True
+        return False
     
     #Whether this macro matches the given expression, starting at the left
     def matches(self, expr, form=None, mappings=None, exact=False):
