@@ -161,14 +161,14 @@ class Shell:
         if macros==None:
             macros = self.macros
         
-        if len(macros) == 2:
-            if macros[1] < macros[0]:
-                temp = macros[0]
-                macros[0] = macros[1]
-                macros[1] = temp
-        else:
-            macros.sort(key=lambda m:-m.time_added) #Ascending by age - secondary
-            macros.sort(key=lambda m:-m.ln) #Descending by length - primary
+#        if len(macros) == 2:
+#            if macros[1] < macros[0]:
+#                temp = macros[0]
+#                macros[0] = macros[1]
+#                macros[1] = temp
+#        else:
+        macros.sort(key=lambda m:-m.time_added) #Ascending by age - secondary
+        macros.sort(key=lambda m:-m.ln) #Descending by length - primary
 
     def winnow_macros(self, macros, nodes): #Returns unsorted
 #        poss_macros = [m for m in macros if len(m.form) <= len(nodes)]
@@ -216,11 +216,11 @@ class Shell:
         if not result:
             result = sure + poss_macros
         
-        if len(result) >= 50:
-            print(str(len(result)) + ' macros')
-            print('nodes:')
-            print(nodes)
-            print('******')
+#        if len(result) >= 50:
+#            print(str(len(result)) + ' macros')
+#            print('nodes:')
+#            print(nodes)
+#            print('******')
         
         return result
 
@@ -239,9 +239,9 @@ class Shell:
             
             for node in nodes: #Interpret inner brackets first
                 
-                while type(node) is list: #Kludge
-                    print('LIST')
-                    node = node[0]
+#                while type(node) is list: #Kludge
+#                    print('LIST')
+#                    node = node[0]
                 
                 if node.node_type in [NodeType.SQUARE, NodeType.CURLY]:
                     changed = True
@@ -265,8 +265,14 @@ class Shell:
                     
                     c_nodes = nodes[i:]
                     poss_macros = self.winnow_macros(self.macros, c_nodes)
-                    if len(poss_macros) > 1:
+                    
+                    #Sort poss_macros
+                    if len(poss_macros) > 2:
                         self.sort_macros(macros=poss_macros)
+                    else:
+                        if len(poss_macros) == 2:
+                            if poss_macros[1] < poss_macros[0]:
+                                poss_macros = poss_macros[::-1]
                     
                     for macro in poss_macros:
                         matches, captures, length = macro.matches(c_nodes)
@@ -288,6 +294,32 @@ class Shell:
                                 
                     if going:
                         break
+                    
+#                    while poss_macros:
+#                        macro = min(poss_macros)
+#                        matches, captures, length = macro.matches(c_nodes)
+#                        if matches:
+#                            product = macro.get_product(captures)
+#                            if product != nodes[i:i+length]:#Only if changed
+#                                going = True
+#                                changed = True
+#                                if verbose:
+#                                    print('***** ' + macro.name + ' *****')
+#                                    print(nodes)
+#                                nodes = nodes[0:i] + product + nodes[i+length:]
+#                                if verbose:
+#                                    print('*****')
+#                                    print(nodes)
+#                                    print('*' * (12 + len(macro.name)))
+#                                    print('')
+#                                break #Go back to brackets
+#                            else:
+#                                poss_macros.remove(macro)
+#                        else:
+#                            poss_macros.remove(macro)
+#                                
+#                    if going:
+#                        break
                 
         return nodes, changed
 
