@@ -14,12 +14,17 @@ class NodeType(Enum):
     CAPTURE = 'CAPTURE' #~word
 #    DEF = 'DEF'         #->
     NORMAL = 'NORMAL'   #word
-    
+
+
+BRACKET_TYPES = [NodeType.PAREN, NodeType.SQUARE, NodeType.CURLY]
+
 class Node:
     def __init__(self, node_type, val='', children=[]):
         self.node_type = node_type
         self.val = val
+        self.v_hash = hash(self.val)
         self.children = children[:]
+        self.id = 0 #The common id
         
     def __str__(self, depth=0):
         result = '(' + str(self.node_type)[9:] + ' ' + str(self.val) + ')'
@@ -42,11 +47,8 @@ class Node:
             return False
         if self.node_type != other.node_type:
             return False
-        if hasattr(self, 'id') != hasattr(other, 'id'):
+        if self.id != other.id:
             return False
-        if hasattr(self, 'id') and hasattr(other, 'id'):
-            if self.id != other.id:
-                return False
         return True
     
     def __ne__(self, other):
@@ -54,9 +56,9 @@ class Node:
     
     def __hash__(self):
         result = 17
-        result += hash(self.val)
+        result += self.v_hash
         result *= 31
-        result += hash(self.id) if hasattr(self, 'id') else 0
+        result += self.id
         result *= 31
         return result
         

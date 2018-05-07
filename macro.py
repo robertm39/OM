@@ -7,6 +7,7 @@ Created on Fri May  4 12:16:39 2018
 #from numba import jitclass#, uint16, boolean
 
 import om
+import node as nd
 from utils import normal
 from utils import fill_in_form
 
@@ -24,6 +25,18 @@ def handle_cond_macro(form, product_form, cond_form, mappings, shell):
 #        ('is_cond', boolean)]
 
 #@jitclass#(spec)
+
+#def is_free(form):
+#    capture_names = []
+#    for node in form:
+#        if node.NodeType in nd.BRACKET_TYPES:
+#            return False
+#        if node.NodeType is nd.NodeType.CAPTURE:
+#            if node.name in capture_names:
+#                return False
+#            capture_names.append(node.name)
+#    return True
+
 class Macro:
     def __init__(self,
                  form,
@@ -65,7 +78,7 @@ class Macro:
         return False
     
     #Whether this macro matches the given expression, starting at the left
-    def matches(self, expr, form=None, mappings=None, exact=False):
+    def matches(self, expr, norm_done=False, form=None, mappings=None, exact=False):
         form = self.form if form == None else form
         mappings = {} if mappings == None else mappings #Captured values: name -> node
         i = 0
@@ -80,6 +93,9 @@ class Macro:
             return not_matches
         
         for node in expr:
+#        for i in (range(0, len(expr))  if not norm_done else self.check_indices):
+#            node = expr[i]
+            
             if node.val == '|': #blocks macro comprehension
                 return not_matches
             
@@ -93,15 +109,19 @@ class Macro:
                         return not_matches
                 else: #Capture this node
                     mappings[name] = node
-            elif f_node.node_type is om.NodeType.PAREN: #A list
+#            elif f_node.node_type is om.NodeType.PAREN: #A list
+            elif f_node.node_type in om.BRACKET_TYPES: #A list
+                if f_node.node_type != node.node_type:
+                    return not_matches
                 does_match, mappings, length = self.matches(node.children,
                                                             form=f_node.children,
                                                             mappings=mappings,
                                                             exact=True)
                 if not does_match:
                     return not_matches
-            elif f_node != node:
-                return not_matches
+            elif not norm_done:
+                if f_node != node:
+                    return not_matches
             i += 1
             if i >= len(form):
                 break #We've gone past the form

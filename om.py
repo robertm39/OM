@@ -32,9 +32,9 @@ class Shell:
         self.macros = []
 #        self.macros_by_len = [] #A list of lists
         self.max_len = 0
-        self.free_macros = {}
-        self.bound_macros = {}
-        self.current_id = 0
+        self.free_macros = {}  #index -> list
+        self.bound_macros = {} #(index, val) -> list
+        self.current_id = 1
         self.macros_added = 0 #For tracking which macros are older
         for macro in bm.get_builtin_macros(self):
             self.register_macro(macro)
@@ -138,7 +138,7 @@ class Shell:
                 else:
                     self.free_macros[i].append(macro)
             else:
-                self.bound_macros[(i, node)] = self.bound_macros.get((i, node), []) + [macro]
+                self.bound_macros[(i, node.val)] = self.bound_macros.get((i, node.val), []) + [macro]
     
     def update_max_len(self, macro):
         self.max_len = max(self.max_len, macro.ln)
@@ -166,26 +166,28 @@ class Shell:
     def winnow_macros(self, macros, nodes): #Returns unsorted
         n_len = len(nodes)
         if n_len < self.max_len:
-            poss_macros = macros
             max_len = min(n_len, self.max_len)
         else:
-            poss_macros = macros
             max_len = self.max_len
         
         result = None
-        
+        poss_macros = macros[:]
         sure = []
         for i in range(0, n_len):
             #Macros that are completely matched
-            done = [m for m in poss_macros if m.ln < i + 1]                                                                         
+#            done = [m for m in poss_macros if m.ln < i + 1]
+            done = [m for m in poss_macros if m.ln == i]
             sure.extend(done)
-            poss_macros = [m for m in poss_macros if not m in done]
+            
+            for m in done:
+                poss_macros.remove(m)
             
             if i + 1 > max_len:
                 result = sure + poss_macros
                 break
+            
             free = self.free_macros.get(i, [])
-            matching = self.bound_macros.get((i, nodes[i]), [])
+            matching = self.bound_macros.get((i, nodes[i].val), [])
             left = set(free) | set(matching)
             poss_macros = list(set(poss_macros) & left)
             
@@ -247,7 +249,7 @@ class Shell:
                                 poss_macros = poss_macros[::-1]
                     
                     for macro in poss_macros:
-                        matches, captures, length = macro.matches(c_nodes)
+                        matches, captures, length = macro.matches(c_nodes, norm_done=True)
                         if matches:
                             product = macro.get_product(captures)
                             if product != nodes[i:i+length]:#Only if changed
@@ -266,32 +268,6 @@ class Shell:
                                 
                     if going:
                         break
-                    
-#                    while poss_macros:
-#                        macro = min(poss_macros)
-#                        matches, captures, length = macro.matches(c_nodes)
-#                        if matches:
-#                            product = macro.get_product(captures)
-#                            if product != nodes[i:i+length]:#Only if changed
-#                                going = True
-#                                changed = True
-#                                if verbose:
-#                                    print('***** ' + macro.name + ' *****')
-#                                    print(nodes)
-#                                nodes = nodes[0:i] + product + nodes[i+length:]
-#                                if verbose:
-#                                    print('*****')
-#                                    print(nodes)
-#                                    print('*' * (12 + len(macro.name)))
-#                                    print('')
-#                                break #Go back to brackets
-#                            else:
-#                                poss_macros.remove(macro)
-#                        else:
-#                            poss_macros.remove(macro)
-#                                
-#                    if going:
-#                        break
                 
         return nodes, changed
 
