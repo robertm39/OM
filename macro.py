@@ -4,6 +4,7 @@ Created on Fri May  4 12:16:39 2018
 
 @author: rober
 """
+#from numba import jitclass#, uint16, boolean
 
 import om
 from utils import normal
@@ -18,6 +19,11 @@ def handle_cond_macro(form, product_form, cond_form, mappings, shell):
     else:
         return fill_in_form(form, mappings)
 
+#spec = [('form', Node),
+#        ('ln', uint16[:]),
+#        ('is_cond', boolean)]
+
+#@jitclass#(spec)
 class Macro:
     def __init__(self,
                  form,
@@ -51,6 +57,9 @@ class Macro:
     def __lt__(self, other): #Less than -> runs earlier
         if self.ln > other.ln:
             return True
+        if self.ln < other.ln:
+            return False
+        #self.ln == other.ln
         if self.time_added > other.time_added:
             return True
         return False

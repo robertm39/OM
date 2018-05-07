@@ -141,10 +141,6 @@ class Shell:
                 self.bound_macros[(i, node)] = self.bound_macros.get((i, node), []) + [macro]
     
     def update_max_len(self, macro):
-#        mln = macro.ln
-#        for i in range(self.max_len - 1, mln):
-#            self.macros_by_len.append([])
-#        self.macros_by_len[mln - 1].append(macro)
         self.max_len = max(self.max_len, macro.ln)
     
     def register_macro(self, macro):
@@ -155,33 +151,22 @@ class Shell:
         self.update_bound_and_free(macro)
         self.trim_macros(macro)
         self.update_max_len(macro)
-#        self.sort_macros()
 
     def sort_macros(self, macros=None):
         if macros==None:
             macros = self.macros
         
-#        if len(macros) == 2:
-#            if macros[1] < macros[0]:
-#                temp = macros[0]
-#                macros[0] = macros[1]
-#                macros[1] = temp
-#        else:
         macros.sort(key=lambda m:-m.time_added) #Ascending by age - secondary
         macros.sort(key=lambda m:-m.ln) #Descending by length - primary
-
+    
+    def matches(self, macro, nodes, i):
+        form = macro.form
+        return macro.ln <= i or form[i].node_type is NodeType.CAPTURE or form[i].node_type in BRACKET_TYPES or form[i] == nodes[i]
+    
     def winnow_macros(self, macros, nodes): #Returns unsorted
-#        poss_macros = [m for m in macros if len(m.form) <= len(nodes)]
-#        max_len = max([len(m.form) for m in poss_macros])
-        
         n_len = len(nodes)
         if n_len < self.max_len:
-#            poss_macros = []
-#            for i in range(0, n_len):
-#                l = self.macros_by_len[i]
-#                poss_macros.extend(l)
-#            [poss_macros.extend(self.macros_by_len[i]) for i  in range(0, n_len)]
-            poss_macros = [m for m in macros if m.ln <= n_len]
+            poss_macros = macros
             max_len = min(n_len, self.max_len)
         else:
             poss_macros = macros
@@ -192,40 +177,31 @@ class Shell:
         sure = []
         for i in range(0, n_len):
             #Macros that are completely matched
-            done = [m for m in poss_macros if m.ln < i + 1]
+            done = [m for m in poss_macros if m.ln < i + 1]                                                                         
             sure.extend(done)
             poss_macros = [m for m in poss_macros if not m in done]
             
             if i + 1 > max_len:
                 result = sure + poss_macros
                 break
-#                return poss_macros + sure
             free = self.free_macros.get(i, [])
             matching = self.bound_macros.get((i, nodes[i]), [])
             left = set(free) | set(matching)
             poss_macros = list(set(poss_macros) & left)
-#            poss_macros = [m for m in poss_macros if m in free or m in matching]
             
             if not poss_macros:
                 result = sure
                 break
-#                return sure
-#            max_len = max([len(m.form) for m in poss_macros])
             max_len = max([m.ln for m in poss_macros])
             
         if not result:
             result = sure + poss_macros
-        
-#        if len(result) >= 50:
-#            print(str(len(result)) + ' macros')
-#            print('nodes:')
-#            print(nodes)
-#            print('******')
+            
+        result = [m for m in result if m.ln <= n_len]
         
         return result
-
+    
     def apply_macros(self, nodes, verbose=False, level=0): #Takes and returns a list of nodes
-#        self.sort_macros()
         
         nodes = nodes[:] #Copy to get rid of side effects
         
@@ -238,10 +214,6 @@ class Shell:
             i = 0
             
             for node in nodes: #Interpret inner brackets first
-                
-#                while type(node) is list: #Kludge
-#                    print('LIST')
-#                    node = node[0]
                 
                 if node.node_type in [NodeType.SQUARE, NodeType.CURLY]:
                     changed = True

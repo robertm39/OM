@@ -26,14 +26,14 @@ def add_bf(shell):
     shell.interpret('(R-LP) -> (cond (PROG-I -> [match-lb [PROG-I] [prog]]) [not [[get tape [ptr]] is 0.0]] ())')
     
     shell.interpret('(DO-BF ~a) -> ()') #Get rid of comments
-    shell.interpret('(DO-BF (>) ) -> (PTR-R)')
-    shell.interpret('(DO-BF (<) ) -> (PTR-L)')
-    shell.interpret('(DO-BF (+) ) -> (INC)')
-    shell.interpret('(DO-BF (-) ) -> (DEC)')
-    shell.interpret('(DO-BF (.) ) -> (CHR-O)')
-    shell.interpret('(DO-BF (,) ) -> (CHR-I)')
-    shell.interpret('(DO-BF (`[) ) -> (L-LP)')
-    shell.interpret('(DO-BF (`]) ) -> (R-LP)')
+    shell.interpret('(DO-BF > ) -> (PTR-R)')
+    shell.interpret('(DO-BF < ) -> (PTR-L)')
+    shell.interpret('(DO-BF + ) -> (INC)')
+    shell.interpret('(DO-BF - ) -> (DEC)')
+    shell.interpret('(DO-BF . ) -> (CHR-O)')
+    shell.interpret('(DO-BF , ) -> (CHR-I)')
+    shell.interpret('(DO-BF `[ ) -> (L-LP)')
+    shell.interpret('(DO-BF `] ) -> (R-LP)')
     
-    shell.interpret('(run-bf ~prog) -> (loc c ([ptr -> 0.0] [ENS-VAL] [WIPE-TAPE] [PROG-I -> 0] [prog -> (~prog)] [ ( [c -> {{[ind [PROG-I] [prog]]}} ] [DO-BF [c]] [PROG-I -> [[PROG-I] + 1]] ) while ([PROG-I] < [len [prog]]) ] ) )')
+    shell.interpret('(run-bf ~prog) -> (loc c ([ptr -> 0.0] [ENS-VAL] [WIPE-TAPE] [PROG-I -> 0] [prog -> (~prog)] [ ( [c -> {[ind [PROG-I] [prog]]} ] [DO-BF [c]] [PROG-I -> [[PROG-I] + 1]] ) while ([PROG-I] < [len [prog]]) ] ) )')
     shell.interpret('(rbf) -> (run-bf [expd [inp]])')

@@ -36,11 +36,11 @@ class Node:
     def __eq__(self, other):
         if other == None:
             return False
-        if self.node_type != other.node_type:
-            return False
         if self.val != other.val:
             return False
         if self.children != other.children:
+            return False
+        if self.node_type != other.node_type:
             return False
         if hasattr(self, 'id') != hasattr(other, 'id'):
             return False
