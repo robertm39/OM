@@ -14,9 +14,10 @@ boc.add_all(s)
 bf_om.add_bf(s)
 
 #s.interpret('run-bf (+ + + + + + + + + + `[ > + + + + + + + + + + < - `] > `[ > + + + + + + + + + + < - `] > `[ > + < - `])')
-s.interpret('run-bf (+ + + + + + + + + + `[ > + + + + + + + + + + < - `] > `[ > . + < - `])')
+#s.interpret('run-bf (+ + + + + + + + + + `[ > + + + + + + + + + + < - `] > `[ > . + < - `])')
 
-##s.interpret('run-bf (+ `[ + . `] )')
-#while True:
-#    line = input('LINE:')
-#    s.interpret(line, verbose=False, do_print=True)
+#s.interpret('run-bf (+ `[ + . `] )')
+
+while True:
+    line = input('LINE:')
+    s.interpret(line, verbose=False, do_print=True)

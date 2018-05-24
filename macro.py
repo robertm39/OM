@@ -119,11 +119,16 @@ class Macro:
                                                             exact=True)
                 if not does_match:
                     return not_matches
-            elif not norm_done:
-                if f_node != node:
-                    return not_matches
+#            elif not norm_done:
+            elif f_node != node:
+                return not_matches
             i += 1
             if i >= len(form):
                 break #We've gone past the form
+        
+#        if self.form[0].val == 'i':
+#            print([str(n) for n in self.form])
+#            print([str(n) for n in expr])
+#            print('')
         
         return True, mappings, len(form)

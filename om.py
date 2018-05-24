@@ -2,30 +2,9 @@ import builtin_macros as bm
 
 from node import NodeType
 from node import Node
-from node import DEF_NODE
 
-BRACKET_DICT = {}
-ESCAPE = '`'
-WHITESPACE = [' ', '\n', '\t', '\r']
-
-class Bracket:
-    def __init__(self, node_type, text):
-        self.node_type = node_type
-        self.left = text[0]
-        self.right = text[1]
-        
-        BRACKET_DICT[self.left] = self
-        BRACKET_DICT[self.right] = self
-        
-    def __getitem__(self, index):
-        return self.left if index == 0 else self.right if index == 1 else None
-
-BRACKET_TYPES = [NodeType.PAREN, NodeType.SQUARE, NodeType.CURLY]
-
-paren = Bracket(NodeType.PAREN, '()')
-square = Bracket(NodeType.SQUARE, '[]')
-curly = Bracket(NodeType.CURLY, '{}')
-BRACKETS = [paren, square, curly]
+from utils import BRACKET_TYPES
+import utils
 
 class Shell:
     def __init__(self):
@@ -44,79 +23,81 @@ class Shell:
         self.current_id += 1
         return result
 
-    def matching_bracket_index(self, line, ind):
-        bracket = line[ind]
-        if not bracket in BRACKET_DICT:
-            print(bracket)
-            raise AssertionError
-
-        bracket_type = BRACKET_DICT[bracket]
-        direction = 1 if bracket == bracket_type[0] else -1
-
-        num = 1
-        while num != 0 and 0 <= ind < len(line):
-            ind = ind + direction
-            char = line[ind]
-            if ind == 0 or not line[ind-1] in ESCAPE:
-                if char == bracket_type[0]:
-                    num += direction
-                elif char == bracket_type[1]:
-                    num -= direction
-        if num != 0:
-            raise AssertionError
-        return ind
-
-    def tokenize(self, line):
-        tokens = []
-
-        curr_token = ''
-        escaping = 0
-        
-        ind = 0
-        for char in line + ' ':
-            if escaping > 0:
-                curr_token += char
-                escaping -= 1
-            elif char in BRACKET_DICT:
-                ###Added
-                tokens.append(curr_token)
-                curr_token = ''
-                ###End Added
-                curr_token += char
-                next_bracket = self.matching_bracket_index(line, ind)
-                if next_bracket > ind: #We're at the beginning of a bracket
-                    escaping = next_bracket - ind #skip to the next bracket
-                else: #We're at the end of a bracket
-                    tokens.append(curr_token) #The current token is finished
-                    curr_token = ''
-            elif char in WHITESPACE:
-                tokens.append(curr_token) #We're not escaping, so we're not in brackets
-                curr_token = ''
-            elif char in ESCAPE:
-                curr_token += char
-                escaping += 1
-            else:
-                curr_token += char
-            ind += 1 #Update index for next letter
-                
-        return [t.strip() for t in tokens if t.strip()] #Get rid of whitespace tokens and strip
-
-    def parse(self, token):
-        for bracket in BRACKETS:
-            if token[0] == bracket[0] and token[-1] == bracket[1]:
-                text = token[1:-1]
-                child_tokens = self.tokenize(text)
-                children = [self.parse(token) for token in child_tokens]
-                
-                node = Node(bracket.node_type, children=children)
-                return node
-        if token[0] == '~':
-            text = token[1:]
-            node = Node(NodeType.CAPTURE, val=text)
-            return node
-        if token == DEF_NODE.val:
-            return DEF_NODE
-        return Node(NodeType.NORMAL, val=token.replace('`', ''))
+#    def matching_bracket_index(self, line, ind):
+#        bracket = line[ind]
+#        if not bracket in BRACKET_DICT:
+#            print(bracket)
+#            raise AssertionError
+#
+#        bracket_type = BRACKET_DICT[bracket]
+#        direction = 1 if bracket == bracket_type[0] else -1
+#
+#        num = 1
+#        while num != 0 and 0 <= ind < len(line):
+#            ind = ind + direction
+#            char = line[ind]
+#            if ind == 0 or not line[ind-1] in ESCAPE:
+#                if char == bracket_type[0]:
+#                    num += direction
+#                elif char == bracket_type[1]:
+#                    num -= direction
+#        if num != 0:
+#            raise AssertionError
+#        return ind
+#
+#    def tokenize(self, line):
+#        tokens = []
+#
+#        curr_token = ''
+#        escaping = 0
+#        
+#        ind = 0
+#        for char in line + ' ':
+#            if escaping > 0:
+#                curr_token += char
+#                escaping -= 1
+#            elif char in BRACKET_DICT:
+#                ###Added
+#                tokens.append(curr_token)
+#                curr_token = ''
+#                ###End Added
+#                curr_token += char
+#                next_bracket = self.matching_bracket_index(line, ind)
+#                if next_bracket > ind: #We're at the beginning of a bracket
+#                    escaping = next_bracket - ind #skip to the next bracket
+#                else: #We're at the end of a bracket
+#                    tokens.append(curr_token) #The current token is finished
+#                    curr_token = ''
+#            elif char in WHITESPACE:
+#                tokens.append(curr_token) #We're not escaping, so we're not in brackets
+#                curr_token = ''
+#            elif char in ESCAPE:
+##                curr_token += char
+#                escaping += 1
+#            else:
+#                curr_token += char
+#            ind += 1 #Update index for next letter
+#                
+##        return [t.strip() for t in tokens if t.strip()] #Get rid of whitespace tokens and strip
+#        return [t for t in tokens if t] #Get rid of empty tokens
+#
+#    def parse(self, token):
+#        for bracket in BRACKETS:
+#            if token[0] == bracket[0] and token[-1] == bracket[1]:
+#                text = token[1:-1]
+#                child_tokens = self.tokenize(text)
+#                children = [self.parse(token) for token in child_tokens]
+#                
+#                node = Node(bracket.node_type, children=children)
+#                return node
+#        if token[0] == '~':
+#            text = token[1:]
+#            node = Node(NodeType.CAPTURE, val=text)
+#            return node
+#        if token == DEF_NODE.val:
+#            return DEF_NODE
+##        return Node(NodeType.NORMAL, val=token.replace('`', ''))
+#        return Node(NodeType.NORMAL, val=token)
     
     def trim_macros(self, newest):
         if not newest.is_cond:
@@ -138,7 +119,8 @@ class Shell:
                 else:
                     self.free_macros[i].append(macro)
             else:
-                self.bound_macros[(i, node.val)] = self.bound_macros.get((i, node.val), []) + [macro]
+#                self.bound_macros[(i, node.val)] = self.bound_macros.get((i, node.val), []) + [macro]
+                self.bound_macros[(i, node.val, node.id)] = self.bound_macros.get((i, node.val, node.id), []) + [macro]
     
     def update_max_len(self, macro):
         self.max_len = max(self.max_len, macro.ln)
@@ -175,7 +157,6 @@ class Shell:
         sure = []
         for i in range(0, n_len):
             #Macros that are completely matched
-#            done = [m for m in poss_macros if m.ln < i + 1]
             done = [m for m in poss_macros if m.ln == i]
             sure.extend(done)
             
@@ -187,7 +168,8 @@ class Shell:
                 break
             
             free = self.free_macros.get(i, [])
-            matching = self.bound_macros.get((i, nodes[i].val), [])
+#            matching = self.bound_macros.get((i, nodes[i].val), [])
+            matching = self.bound_macros.get((i, nodes[i].val, nodes[i].id), [])#Added id
             left = set(free) | set(matching)
             poss_macros = list(set(poss_macros) & left)
             
@@ -272,10 +254,10 @@ class Shell:
         return nodes, changed
 
     def interpret(self, line, verbose=False, do_print=False, return_nodes=False):
-        tokens = self.tokenize(line)
+        tokens = utils.tokenize(line)
         if verbose:
             print(tokens)
-        nodes = [self.parse(token) for token in tokens] #Parse tokens
+        nodes = [utils.parse(token) for token in tokens] #Parse tokens
         
         if verbose:
             print(nodes)
