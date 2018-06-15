@@ -31,15 +31,11 @@ def add_bool(shell):
     shell.interpret('(not True) -> (False)')
     shell.interpret('(not False) -> (True)')
     
-    shell.interpret('(False and False) -> (False)')
-    shell.interpret('(False and True) -> (False)')
-    shell.interpret('(True and False) -> (False)')
-    shell.interpret('(True and True) -> (True)')
+    shell.interpret('(False and ~b) -> (False)')
+    shell.interpret('(True and ~b) -> (~b)')
     
-    shell.interpret('(False or False) -> (False)')
-    shell.interpret('(False or True) -> (True)')
-    shell.interpret('(True or False) -> (True)')
-    shell.interpret('(True or True) -> (True)')
+    shell.interpret('(False or ~a) -> (~a)')
+    shell.interpret('(True or ~a) -> (True)')
     
     shell.interpret('(False xor False) -> (False)')
     shell.interpret('(False xor True) -> (True)')
@@ -47,12 +43,12 @@ def add_bool(shell):
     shell.interpret('(True xor True) -> (False)')
 
 def add_lists(shell):
-    shell.interpret('(wcond ~a True ~b) -> (ind 0 ~a)')
-    shell.interpret('(wcond ~a False ~b) -> (ind 0 ~b)')
-    shell.interpret('(~a wwhile ~b) -> (wcond ([[ind 0 ~a] ~a wwhile ~b]) ind 0 ([bool [ind 0 ~b]]) ([]) )')
-    shell.interpret('(~a WFOR ~o IN ~l WITH ~i) -> ([~i -> 0] [ ( [[[~o -> [ind [~i] ~l]] [~a]] [~i -> [[~i] + 1]]]) wwhile ([[~i] < [len [~l]]])] )')
-    shell.interpret('(~a wfor ~o in ~l) -> (~a WFOR ~o IN ~l WITH [loc (i) (i)])')
-    shell.interpret('(unw ~l) -> ([loc (a) (a wfor a)] in ~l)')
+#    shell.interpret('(wcond ~a True ~b) -> (ind 0 ~a)')
+#    shell.interpret('(wcond ~a False ~b) -> (ind 0 ~b)')
+#    shell.interpret('(~a wwhile ~b) -> (wcond ([[ind 0 ~a] ~a wwhile ~b]) ind 0 ([bool [ind 0 ~b]]) ([]) )')
+#    shell.interpret('(~a WFOR ~o IN ~l WITH ~i) -> ([~i -> 0] [ ( [[[~o -> [ind [~i] ~l]] [~a]] [~i -> [[~i] + 1]]]) wwhile ([[~i] < [len [~l]]])] )')
+#    shell.interpret('(~a wfor ~o in ~l) -> (~a WFOR ~o IN ~l WITH [loc (i) (i)])')
+#    shell.interpret('(unw ~l) -> ([loc (a) (a wfor a)] in ~l)')
     
     shell.interpret('(islist ~l) -> ([[expd ~l] is ()])')
     shell.interpret('(slice ~i1 ~i2 ~l) -> (loc (i) ([i -> [~i1]] [([ind [i] ~l] [i -> [[i] + 1]]) while ([[i] < ~i2])]))')

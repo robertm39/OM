@@ -12,7 +12,6 @@ class NodeType(Enum):
     SQUARE = 'SQUARE'   #[]
     CURLY = 'CURLY'     #{}
     CAPTURE = 'CAPTURE' #~word
-#    DEF = 'DEF'         #->
     NORMAL = 'NORMAL'   #word
 
 

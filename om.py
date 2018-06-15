@@ -9,7 +9,6 @@ import utils
 class Shell:
     def __init__(self):
         self.macros = []
-#        self.macros_by_len = [] #A list of lists
         self.max_len = 0
         self.free_macros = {}  #index -> list
         self.bound_macros = {} #(index, val) -> list
@@ -23,82 +22,6 @@ class Shell:
         self.current_id += 1
         return result
 
-#    def matching_bracket_index(self, line, ind):
-#        bracket = line[ind]
-#        if not bracket in BRACKET_DICT:
-#            print(bracket)
-#            raise AssertionError
-#
-#        bracket_type = BRACKET_DICT[bracket]
-#        direction = 1 if bracket == bracket_type[0] else -1
-#
-#        num = 1
-#        while num != 0 and 0 <= ind < len(line):
-#            ind = ind + direction
-#            char = line[ind]
-#            if ind == 0 or not line[ind-1] in ESCAPE:
-#                if char == bracket_type[0]:
-#                    num += direction
-#                elif char == bracket_type[1]:
-#                    num -= direction
-#        if num != 0:
-#            raise AssertionError
-#        return ind
-#
-#    def tokenize(self, line):
-#        tokens = []
-#
-#        curr_token = ''
-#        escaping = 0
-#        
-#        ind = 0
-#        for char in line + ' ':
-#            if escaping > 0:
-#                curr_token += char
-#                escaping -= 1
-#            elif char in BRACKET_DICT:
-#                ###Added
-#                tokens.append(curr_token)
-#                curr_token = ''
-#                ###End Added
-#                curr_token += char
-#                next_bracket = self.matching_bracket_index(line, ind)
-#                if next_bracket > ind: #We're at the beginning of a bracket
-#                    escaping = next_bracket - ind #skip to the next bracket
-#                else: #We're at the end of a bracket
-#                    tokens.append(curr_token) #The current token is finished
-#                    curr_token = ''
-#            elif char in WHITESPACE:
-#                tokens.append(curr_token) #We're not escaping, so we're not in brackets
-#                curr_token = ''
-#            elif char in ESCAPE:
-##                curr_token += char
-#                escaping += 1
-#            else:
-#                curr_token += char
-#            ind += 1 #Update index for next letter
-#                
-##        return [t.strip() for t in tokens if t.strip()] #Get rid of whitespace tokens and strip
-#        return [t for t in tokens if t] #Get rid of empty tokens
-#
-#    def parse(self, token):
-#        for bracket in BRACKETS:
-#            if token[0] == bracket[0] and token[-1] == bracket[1]:
-#                text = token[1:-1]
-#                child_tokens = self.tokenize(text)
-#                children = [self.parse(token) for token in child_tokens]
-#                
-#                node = Node(bracket.node_type, children=children)
-#                return node
-#        if token[0] == '~':
-#            text = token[1:]
-#            node = Node(NodeType.CAPTURE, val=text)
-#            return node
-#        if token == DEF_NODE.val:
-#            return DEF_NODE
-##        return Node(NodeType.NORMAL, val=token.replace('`', ''))
-#        return Node(NodeType.NORMAL, val=token)
-    
     def trim_macros(self, newest):
         if not newest.is_cond:
             length = len(newest.form)

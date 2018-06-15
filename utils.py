@@ -10,15 +10,21 @@ from node import Node
 from node import NodeType
 from node import DEF_NODE
 
+def key_from_name(name):
+    return name, 0
+
+def get_key(node):
+    return node.val, node.id
+
 def fill_in_form(form, mappings):
     form = form[:]
     
     i = 0
     for node in form:
         if node.node_type is NodeType.CAPTURE:
-            name = node.val
-            if name in mappings:
-                form[i] = mappings[name]
+            key = get_key(node)
+            if key in mappings:
+                form[i] = mappings[key]
         elif node.node_type in om.BRACKET_TYPES:
             new_nodes = fill_in_form(node.children, mappings)
             form[i] = Node(node.node_type, children=new_nodes)
@@ -102,10 +108,9 @@ def tokenize(line):
             curr_token += char
             escaping -= 1
         elif char in BRACKET_DICT:
-            ###Added
             tokens.append(curr_token)
             curr_token = ''
-            ###End Added
+            
             curr_token += char
             next_bracket = matching_bracket_index(line, ind)
             if next_bracket > ind: #We're at the beginning of a bracket
@@ -117,7 +122,6 @@ def tokenize(line):
             tokens.append(curr_token) #We're not escaping, so we're not in brackets
             curr_token = ''
         elif char in ESCAPE:
-#                curr_token += char
             escaping += 1
         else:
             curr_token += char

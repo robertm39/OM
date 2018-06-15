@@ -11,12 +11,13 @@ from macro import Macro
 from utils import unpack_and_wrap_node
 from utils import normal
 from utils import capture
+from utils import key_from_name
 
 #********************
 def defmac_get_product(shell, mappings):
     
-    form = mappings['FORM']
-    product_form = mappings['PRODUCT']
+    form = mappings[key_from_name('FORM')]
+    product_form = mappings[key_from_name('PRODUCT')]
     
     form = unpack_and_wrap_node(form)
     product_form = unpack_and_wrap_node(product_form)
@@ -34,9 +35,9 @@ def get_defmac_macro(shell):
                  get_product=lambda maps: defmac_get_product(shell, maps))
 #********************
 def def_condmac_get_product(shell, mappings):
-    form = mappings['FORM']
-    product_form = mappings['PRODUCT']
-    cond = mappings['COND']
+    form = mappings[key_from_name('FORM')]
+    product_form = mappings[key_from_name('PRODUCT')]
+    cond = mappings[key_from_name('COND')]
     
     form = unpack_and_wrap_node(form)
     product_form = unpack_and_wrap_node(product_form)
@@ -72,9 +73,9 @@ def loc_macro_get_product(shell, mappings):
     
     node_id = shell.take_id()
 #    print('NODE_ID: ' + str(node_id))
-    nodes = unpack_and_wrap_node(mappings['names'])
+    nodes = unpack_and_wrap_node(mappings[key_from_name('names')])
 #    names = [node.val for node in names]
-    prog = mappings['prog'].children
+    prog = mappings[key_from_name('prog')].children
     prog = [n.copy() for n in prog]
     make_local(nodes, node_id, prog)
     return prog
@@ -88,7 +89,7 @@ def get_loc_macro(shell):
                  get_product = lambda maps: loc_macro_get_product(shell, maps))
 #********************
 def to_bool_get_product(mappings): #Improve
-    node = mappings['a']
+    node = mappings[key_from_name('a')]
     t_node = [normal('True')]
     f_node = [normal('False')]
     if node.node_type is om.NodeType.PAREN:
@@ -110,8 +111,8 @@ def get_to_bool_macro():
     return Macro(form=form, name='TO_BOOL', get_product=to_bool_get_product)
 #********************
 def binary_macro_get_product(mappings, op):
-    v1 = mappings['a'].val
-    v2 = mappings['b'].val
+    v1 = mappings[key_from_name('a')].val
+    v2 = mappings[key_from_name('b')].val
     
     val = op(v1, v2)
     return [normal(str(val))]
@@ -127,7 +128,7 @@ def get_binary_macro(name, op):
 
 #********************
 def print_macro_get_product(mappings):
-    node = mappings['a']
+    node = mappings[key_from_name('a')]
     print(node.val)
     return []
 
@@ -137,8 +138,8 @@ def get_print_macro():
     return Macro(form=form, name='pr', get_product=print_macro_get_product)
 #********************
 def ind_macro_get_product(mappings):
-    i = int(float(mappings['i'].val))
-    l = mappings['l'].children
+    i = int(float(mappings[key_from_name('i')].val))
+    l = mappings[key_from_name('l')].children
     return [l[i]]
 
 def get_ind_macro():
@@ -148,17 +149,17 @@ def get_ind_macro():
     return Macro(form=form, name='ind', get_product=ind_macro_get_product)
 
 #********************
-#def unw_macro_get_product(mappings):
-#    node = mappings['a']
-#    return node.children
-#
-#def get_unw_macro():
-#    form = [normal('unw'),
-#            capture('a')]
-#    return Macro(form=form, name='unw', get_product=unw_macro_get_product)
+def unw_macro_get_product(mappings):
+    node = mappings[key_from_name('a')]
+    return node.children
+
+def get_unw_macro():
+    form = [normal('unw'),
+            capture('a')]
+    return Macro(form=form, name='unw', get_product=unw_macro_get_product)
 #********************
 def len_macro_get_product(mappings):
-    node = mappings['l']
+    node = mappings[key_from_name('l')]
     return [normal(str(len(node.children)))]
 
 def get_len_macro():
@@ -167,7 +168,7 @@ def get_len_macro():
     return Macro(form=form, name='len', get_product=len_macro_get_product)
 #********************
 def expd_macro_get_product(mappings):
-    a = mappings['a']
+    a = mappings[key_from_name('a')]
     result = []
     for char in a.val:
         result.append(normal(char))
@@ -179,7 +180,7 @@ def get_expd_macro():
     return Macro(form=form, name='expd', get_product=expd_macro_get_product)
 #********************
 def wrap_macro_get_product(mappings):
-    l = mappings['l']
+    l = mappings[key_from_name('l')]
     result = ''
     for node in l.children:
         result += node.val
@@ -199,7 +200,7 @@ def get_inp_macro():
     return Macro(form=form, name='inp', get_product=inp_macro_get_product)
 #********************
 def char_macro_get_product(mappings):
-    a = mappings['a']
+    a = mappings[key_from_name('a')]
     val = chr(int(float(a.val)))
     return [normal(val)]
 
@@ -209,7 +210,7 @@ def get_char_macro():
     return Macro(form=form, name='char', get_product=char_macro_get_product)
 #********************
 def ord_macro_get_product(mappings):
-    a = mappings['a']
+    a = mappings[key_from_name('a')]
     val = ord(a.val[0])
     return [normal(val)]
 
@@ -219,7 +220,7 @@ def get_ord_macro():
     return Macro(form=form, name='ord', get_product=ord_macro_get_product)
 #********************
 def capt_macro_get_product(mappings):
-    a = mappings['a']
+    a = mappings[key_from_name('a')]
     return [capture(a.val)]
 
 def get_capt_macro():
@@ -235,7 +236,7 @@ def get_builtin_macros(shell):
             get_to_bool_macro(),
             get_print_macro(),
             get_ind_macro(),
-#            get_unw_macro(),
+            get_unw_macro(),
             get_len_macro(),
             get_expd_macro(),
             get_wrap_macro(),
